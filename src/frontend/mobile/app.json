@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "Mandi Manager",
+    "slug": "mandi-manager-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "mandi",
+    "platforms": ["ios", "android"],
+    "plugins": ["expo-router", "expo-secure-store"]
+  }
+}

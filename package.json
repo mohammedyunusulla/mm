@@ -1,0 +1,20 @@
+{
+  "name": "mandi-manager",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "src/frontend/*",
+    "src/shared",
+    "src/backend"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=src/frontend/web",
+    "dev:mobile": "npm run dev --workspace=src/frontend/mobile",
+    "dev:api": "npm run dev --workspace=src/backend",
+    "build:web": "npm run build --workspace=src/frontend/web",
+    "dev": "npm run dev:web"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

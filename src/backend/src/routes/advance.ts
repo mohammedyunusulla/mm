@@ -1,0 +1,136 @@
+import { Router, Request, Response } from "express";
+import { z } from "zod";
+import { authenticate } from "../middleware/auth";
+import { validate } from "../middleware/validate";
+import { nextAdvanceInvoiceNumber } from "../lib/invoice";
+
+const router = Router({ mergeParams: true });
+router.use(authenticate);
+
+const addSchema = z.object({
+  amount: z.number().positive(),
+  note: z.string().max(500).optional(),
+  date: z.string().optional(),
+});
+
+const updateSchema = z.object({
+  amount: z.number().positive().optional(),
+  note: z.string().max(500).optional(),
+  date: z.string().optional(),
+});
+
+type ParamsWithClient = { clientId: string };
+
+// ── GET /api/clients/:clientId/advance ───────────────────────────
+router.get("/", async (req: Request<ParamsWithClient>, res: Response) => {
+  try {
+    const { clientId } = req.params;
+    const db = req.db!;
+
+    const client = await db.client.findUnique({ where: { id: clientId } });
+    if (!client) { res.status(404).json({ success: false, error: "Client not found" }); return; }
+
+    const payments = await db.advancePayment.findMany({
+      where: { clientId },
+      orderBy: { date: "desc" },
+    });
+
+    res.json({ success: true, data: payments });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// ── POST /api/clients/:clientId/advance ──────────────────────────
+router.post("/", validate(addSchema), async (req: Request<ParamsWithClient>, res: Response) => {
+  try {
+    const { clientId } = req.params;
+    const db = req.db!;
+    const { amount, note, date } = req.body as z.infer<typeof addSchema>;
+
+    const client = await db.client.findUnique({ where: { id: clientId } });
+    if (!client) { res.status(404).json({ success: false, error: "Client not found" }); return; }
+
+    const paymentDate = date ? new Date(date) : new Date();
+    const invoiceNumber = await nextAdvanceInvoiceNumber(db, paymentDate);
+
+    const [payment, updatedClient] = await db.$transaction([
+      db.advancePayment.create({
+        data: { clientId, amount, invoiceNumber, note: note ?? "", date: paymentDate },
+      }),
+      db.client.update({
+        where: { id: clientId },
+        data: { advanceBalance: { increment: amount }, updatedAt: new Date() },
+      }),
+    ]);
+
+    res.status(201).json({ success: true, data: { payment, updatedClient } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// ── PUT /api/advance/:id ──────────────────────────────────────────────────
+export const advanceUpdateRouter = Router();
+advanceUpdateRouter.use(authenticate);
+
+advanceUpdateRouter.put("/:id", validate(updateSchema), async (req, res) => {
+  try {
+    const db = req.db!;
+    const { amount, note, date } = req.body as z.infer<typeof updateSchema>;
+
+    const existing = await db.advancePayment.findUnique({ where: { id: req.params.id as string } });
+    if (!existing) { res.status(404).json({ success: false, error: "Payment not found" }); return; }
+
+    const newAmount = amount ?? Number(existing.amount);
+    const diff = newAmount - Number(existing.amount);
+
+    const [payment, updatedClient] = await db.$transaction([
+      db.advancePayment.update({
+        where: { id: req.params.id as string },
+        data: {
+          ...(amount !== undefined ? { amount } : {}),
+          ...(note !== undefined ? { note } : {}),
+          ...(date ? { date: new Date(date) } : {}),
+        },
+      }),
+      db.client.update({
+        where: { id: existing.clientId },
+        data: { advanceBalance: { increment: diff }, updatedAt: new Date() },
+      }),
+    ]);
+
+    res.json({ success: true, data: { payment, client: updatedClient } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// ── DELETE /api/advance/:id ───────────────────────────────────────────────
+advanceUpdateRouter.delete("/:id", async (req, res) => {
+  try {
+    const db = req.db!;
+
+    const existing = await db.advancePayment.findUnique({ where: { id: req.params.id } });
+    if (!existing) { res.status(404).json({ success: false, error: "Payment not found" }); return; }
+
+    const [, updatedClient] = await db.$transaction([
+      db.advancePayment.delete({ where: { id: req.params.id } }),
+      db.client.update({
+        where: { id: existing.clientId },
+        data: { advanceBalance: { decrement: Number(existing.amount) }, updatedAt: new Date() },
+      }),
+    ]);
+
+    res.json({ success: true, data: updatedClient });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+export default router;
+

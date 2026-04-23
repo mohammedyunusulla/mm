@@ -1,0 +1,35 @@
+// Master database schema — platform-level data only.
+// Connection: MASTER_DATABASE_URL
+// Generates its own Prisma client to: src/backend/generated/master-client
+// Run:  npx prisma generate --schema=prisma/master.prisma
+//       npx prisma migrate dev --schema=prisma/master.prisma --name init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/master-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("MASTER_DATABASE_URL")
+}
+
+// ── Mandi tenants ─────────────────────────────────────────────────
+model Tenant {
+  id         String   @id @default(uuid())
+  slug       String   @unique          // "sharma-mandi" – used at login
+  name       String                    // "Sharma Mandi"
+  dbUrl      String                    // postgres connection string to their private DB
+  adminEmail String                    // display only – actual creds live in tenant DB
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ── Platform superusers ───────────────────────────────────────────
+model SuperUser {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}

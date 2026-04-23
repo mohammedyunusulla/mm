@@ -1,0 +1,104 @@
+name: Build & Deploy to Azure VM
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma clients
+        working-directory: src/backend
+        run: npx prisma generate --schema=prisma/schema.prisma && npx prisma generate --schema=prisma/master.prisma
+
+      - name: Build backend
+        run: npm run build --workspace=src/backend
+
+      - name: Build frontend
+        run: npm run build:web
+        env:
+          NEXT_PUBLIC_USE_MOCK: "false"
+          NEXT_PUBLIC_API_URL: ${{ secrets.API_URL }}
+
+      - name: Package artifacts
+        run: |
+          # Backend: compiled JS + prisma + package files
+          tar czf backend.tar.gz \
+            src/backend/dist \
+            src/backend/prisma \
+            src/backend/generated \
+            src/backend/package.json \
+            src/shared/src \
+            src/shared/package.json \
+            package.json \
+            package-lock.json
+
+          # Frontend: Next.js standalone + static
+          tar czf frontend.tar.gz \
+            src/frontend/web/.next \
+            src/frontend/web/public \
+            src/frontend/web/package.json \
+            src/shared/src \
+            src/shared/package.json \
+            package.json \
+            package-lock.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend
+          path: backend.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend
+          path: frontend.tar.gz
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend
+          path: .
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend
+          path: .
+
+      - name: Copy artifacts to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "backend.tar.gz,frontend.tar.gz,scripts/deploy.sh"
+          target: /tmp/deploy
+
+      - name: Deploy on VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            chmod +x /tmp/deploy/scripts/deploy.sh
+            sudo /tmp/deploy/scripts/deploy.sh

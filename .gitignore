@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.next/
+.expo/
+*.env
+*.env.local
+*.db
+.turbo/
+coverage/
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+
+# Generated Prisma client (can be regenerated)
+src/backend/generated/
