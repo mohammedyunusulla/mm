@@ -100,7 +100,7 @@ router.post("/mandis", validate(createMandiSchema), async (req, res) => {
       execSync(`npx prisma db push --schema="${schemaPath}" --skip-generate --accept-data-loss`, {
         env: { ...process.env, TENANT_DATABASE_URL: dbUrl },
         cwd: process.cwd(),
-        shell: true,
+        shell: process.platform === "win32" ? "cmd.exe" : "/bin/sh",
         stdio: "pipe",
         timeout: 60_000,
       });
