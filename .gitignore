@@ -13,3 +13,4 @@ next-env.d.ts
 
 # Generated Prisma client (can be regenerated)
 src/backend/generated/
+.vercel
