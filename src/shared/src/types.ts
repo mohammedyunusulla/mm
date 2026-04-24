@@ -77,7 +77,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: "ADMIN" | "STAFF";
+  role: "ADMIN" | "OWNER" | "WRITER";
 }
 
 // ── Dashboard Types ──

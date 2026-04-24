@@ -52,6 +52,17 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
 }
 
 /**
+ * Allows ADMIN and OWNER roles — blocks WRITER.
+ */
+export function requireOwnerOrAbove(req: Request, res: Response, next: NextFunction): void {
+  if (req.user?.role !== "ADMIN" && req.user?.role !== "OWNER") {
+    res.status(403).json({ success: false, error: "Owner or Admin access required" });
+    return;
+  }
+  next();
+}
+
+/**
  * Validates a superuser JWT — does NOT attach req.db (superuser needs master DB only).
  */
 export function authenticateSuperUser(req: Request, res: Response, next: NextFunction): void {
