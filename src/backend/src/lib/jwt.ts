@@ -6,7 +6,7 @@ const EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? "7d";
 export interface JwtPayload {
   userId: string;
   tenantId: string;       // master DB tenant id — used to resolve dbUrl
-  role: "ADMIN" | "OWNER" | "WRITER";
+  role: "ADMIN" | "MANAGER";
 }
 
 export interface SuperJwtPayload {
