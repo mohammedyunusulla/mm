@@ -14,15 +14,15 @@ const router = Router();
 // ── Superuser Login ───────────────────────────────────────────────
 // POST /api/super/login
 const loginSchema = z.object({
-  email: z.string().email(),
+  username: z.string().min(1),
   password: z.string().min(1),
 });
 
 router.post("/login", validate(loginSchema), async (req, res) => {
   try {
-    const { email, password } = req.body as z.infer<typeof loginSchema>;
+    const { username, password } = req.body as z.infer<typeof loginSchema>;
 
-    const superUser = await masterDb.superUser.findUnique({ where: { email } });
+    const superUser = await masterDb.superUser.findUnique({ where: { username } });
     if (!superUser) {
       res.status(401).json({ success: false, error: "Invalid credentials" });
       return;
@@ -37,7 +37,7 @@ router.post("/login", validate(loginSchema), async (req, res) => {
     const token = signSuperToken({ superUserId: superUser.id, role: "SUPERUSER" });
     res.json({
       success: true,
-      data: { token, superUser: { id: superUser.id, email: superUser.email } },
+      data: { token, superUser: { id: superUser.id, username: superUser.username } },
     });
   } catch (err) {
     console.error(err);

@@ -45,7 +45,7 @@ export default function LoginPage() {
         const res = await fetch(`${API_URL}/api/super/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ username: email, password }),
         });
         const data = await res.json();
         if (data.success) {
@@ -149,10 +149,10 @@ export default function LoginPage() {
               <label className={`block text-sm font-medium mb-1 ${
                 isMandi ? "text-gray-700" : "text-slate-300"
               }`}>
-                Email
+                {isMandi ? "Email" : "Username"}
               </label>
               <input
-                type="email"
+                type={isMandi ? "email" : "text"}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:border-transparent outline-none transition ${
@@ -160,7 +160,7 @@ export default function LoginPage() {
                     ? "border border-gray-300 focus:ring-green-500"
                     : "bg-slate-700 border border-slate-600 text-white focus:ring-indigo-500 placeholder-slate-400"
                 }`}
-                placeholder={isMandi ? "admin@mandi.com" : "super@mandi.app"}
+                placeholder={isMandi ? "admin@mandi.com" : "Enter username"}
                 required
               />
             </div>
