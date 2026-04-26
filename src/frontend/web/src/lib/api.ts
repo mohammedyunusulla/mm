@@ -55,6 +55,15 @@ export const api = USE_MOCK
       // Transactions
       getTransactions: mockApi.getTransactions,
       createTransaction: mockApi.createTransaction,
+      updateTransaction: (_id: string, _data: Record<string, unknown>) =>
+        Promise.resolve({ success: false, error: "Mock: not implemented" }),
+      deleteTransaction: (_id: string) =>
+        Promise.resolve({ success: false, error: "Mock: not implemented" }),
+      // Client images
+      uploadClientImage: (_id: string, _file: File) =>
+        Promise.resolve({ success: false, error: "Mock: not implemented" }),
+      deleteClientImage: (_id: string) =>
+        Promise.resolve({ success: false, error: "Mock: not implemented" }),
       // Expenses
       getExpenses: mockApi.getExpenses,
       createExpense: mockApi.createExpense,
