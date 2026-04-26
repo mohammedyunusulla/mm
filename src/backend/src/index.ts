@@ -3,6 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
+import path from "path";
 
 import authRouter from "./routes/auth";
 import clientsRouter from "./routes/clients";
@@ -48,6 +49,9 @@ const authLimiter = rateLimit({
 
 // ── Body parsing ──────────────────────────────────────────────────
 app.use(express.json({ limit: "1mb" }));
+
+// ── Static file serving (uploaded images) ─────────────────────────
+app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
 // ── Health check ──────────────────────────────────────────────────
 app.get("/health", (_req, res) => res.json({ status: "ok", ts: new Date().toISOString() }));

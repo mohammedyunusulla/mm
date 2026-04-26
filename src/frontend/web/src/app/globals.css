@@ -1,5 +1,74 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --color-bg: #f8fafc;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #f1f5f9;
+  --color-bg-hover: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+  --color-border: #e2e8f0;
+  --color-sidebar-bg: #1e293b;
+  --color-sidebar-text: #e2e8f0;
+  --color-header-bg: #ffffff;
+  --color-card-bg: #ffffff;
+  --color-input-bg: #f1f5f9;
+  --color-input-border: #cbd5e1;
+}
+
+.dark {
+  --color-bg: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-bg-tertiary: #1e293b;
+  --color-bg-hover: #334155;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #64748b;
+  --color-border: #334155;
+  --color-sidebar-bg: #1e293b;
+  --color-sidebar-text: #e2e8f0;
+  --color-header-bg: #0f172a;
+  --color-card-bg: #1e293b;
+  --color-input-bg: #334155;
+  --color-input-border: #475569;
+}
+
 body {
   font-family: system-ui, -apple-system, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
 }
+
+/* ── Dark mode overrides for pages using gray-* light classes ── */
+.dark main .bg-white { background-color: var(--color-card-bg); }
+.dark main .bg-gray-50 { background-color: var(--color-bg); }
+.dark main .bg-gray-100 { background-color: var(--color-bg-tertiary); }
+.dark main .text-gray-900 { color: var(--color-text); }
+.dark main .text-gray-800 { color: var(--color-text); }
+.dark main .text-gray-700 { color: var(--color-text-secondary); }
+.dark main .text-gray-600 { color: var(--color-text-secondary); }
+.dark main .text-gray-500 { color: var(--color-text-muted); }
+.dark main .text-gray-400 { color: var(--color-text-muted); }
+.dark main .border-gray-100 { border-color: var(--color-border); }
+.dark main .border-gray-200 { border-color: var(--color-border); }
+.dark main .border-gray-300 { border-color: var(--color-input-border); }
+.dark main .divide-gray-100 > * + * { border-color: var(--color-border); }
+.dark main .divide-gray-200 > * + * { border-color: var(--color-border); }
+.dark main .ring-gray-100 { --tw-ring-color: var(--color-border); }
+.dark main .shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+.dark main input,
+.dark main select,
+.dark main textarea {
+  background-color: var(--color-input-bg);
+  border-color: var(--color-input-border);
+  color: var(--color-text);
+}
+.dark main input::placeholder,
+.dark main textarea::placeholder {
+  color: var(--color-text-muted);
+}
+.dark main .hover\:bg-gray-50:hover { background-color: var(--color-bg-hover); }
+.dark main .hover\:bg-gray-100:hover { background-color: var(--color-bg-hover); }

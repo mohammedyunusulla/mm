@@ -1,11 +1,17 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
-import { authenticate } from "../middleware/auth";
+import { authenticate, requireWriteAccess } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import { nextAdvanceInvoiceNumber } from "../lib/invoice";
 
 const router = Router({ mergeParams: true });
 router.use(authenticate);
+
+// Block writes when subscription is in read-only mode
+router.post("*", requireWriteAccess);
+router.put("*", requireWriteAccess);
+router.patch("*", requireWriteAccess);
+router.delete("*", requireWriteAccess);
 
 const addSchema = z.object({
   amount: z.number().positive(),
@@ -75,6 +81,7 @@ router.post("/", validate(addSchema), async (req: Request<ParamsWithClient>, res
 // ── PUT /api/advance/:id ──────────────────────────────────────────────────
 export const advanceUpdateRouter = Router();
 advanceUpdateRouter.use(authenticate);
+advanceUpdateRouter.use(requireWriteAccess);
 
 advanceUpdateRouter.put("/:id", validate(updateSchema), async (req, res) => {
   try {

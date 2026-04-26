@@ -1,15 +1,16 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  UserPlus,
   ShoppingCart,
   Package,
   IndianRupee,
   BarChart3,
-  LogOut,
   Store,
 } from "lucide-react";
 
@@ -20,15 +21,22 @@ const navItems = [
   { href: "/sell-to", label: "Sell To", icon: Package },
   { href: "/expenses", label: "Expenses", icon: IndianRupee },
   { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/users", label: "Users", icon: UserPlus, adminOnly: true },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [role, setRole] = useState<string>("");
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    window.location.href = "/";
-  };
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        setRole(payload.role || "");
+      }
+    } catch {}
+  }, []);
 
   return (
     <aside className="w-64 bg-slate-800 text-white min-h-screen flex flex-col">
@@ -45,7 +53,9 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
+        {navItems
+          .filter((item) => !(item as any).adminOnly || role === "ADMIN")
+          .map((item) => {
           const isActive = pathname === item.href.split("?")[0];
           const Icon = item.icon;
           return (
@@ -64,17 +74,6 @@ export default function Sidebar() {
           );
         })}
       </nav>
-
-      {/* Logout */}
-      <div className="p-4 border-t border-slate-700">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="text-sm font-medium">Logout</span>
-        </button>
-      </div>
     </aside>
   );
 }

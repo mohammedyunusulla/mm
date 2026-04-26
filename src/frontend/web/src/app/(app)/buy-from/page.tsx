@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Plus, ChevronDown, ChevronUp, Pencil, Printer, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Transaction, Client } from "@mandi/shared";
 import Modal from "@/components/Modal";
@@ -23,6 +23,12 @@ function NewTransactionModal({
   const [items, setItems] = useState([{ itemName: "", quantity: "", unit: "kg", pricePerUnit: "" }]);
   const [paidAmount, setPaidAmount] = useState("");
   const [notes, setNotes] = useState("");
+  const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
+  const [arrivalNumber, setArrivalNumber] = useState("");
+  const [vehicleNumber, setVehicleNumber] = useState("");
+  const [commissionAmount, setCommissionAmount] = useState("");
+  const [labourAmount, setLabourAmount] = useState("");
+  const [vehicleRent, setVehicleRent] = useState("");
   const [saving, setSaving] = useState(false);
 
   const selectedBuyer = buyers.find((b) => b.id === clientId);
@@ -45,6 +51,14 @@ function NewTransactionModal({
     const price = parseFloat(item.pricePerUnit) || 0;
     return sum + qty * price;
   }, 0);
+
+  // Auto-calculate commission: 2% of (Total - Labour - Vehicle Rent)
+  const calculatedCommission = (() => {
+    const labour = parseFloat(labourAmount) || 0;
+    const rent = parseFloat(vehicleRent) || 0;
+    const base = totalAmount - labour - rent;
+    return Math.max(0, Math.round(base * 0.02 * 100) / 100);
+  })();
 
   // Auto-apply advance when client or total changes
   useEffect(() => {
@@ -69,6 +83,12 @@ function NewTransactionModal({
         })),
         paidAmount: parseFloat(paidAmount) || 0,
         notes,
+        date: txDate,
+        arrivalNumber: arrivalNumber || undefined,
+        vehicleNumber: vehicleNumber || undefined,
+        commissionAmount: calculatedCommission > 0 ? calculatedCommission : undefined,
+        labourAmount: labourAmount ? parseFloat(labourAmount) : undefined,
+        vehicleRent: vehicleRent ? parseFloat(vehicleRent) : undefined,
       });
       onSaved();
       onClose();
@@ -76,6 +96,11 @@ function NewTransactionModal({
       setItems([{ itemName: "", quantity: "", unit: "kg", pricePerUnit: "" }]);
       setPaidAmount("");
       setNotes("");
+      setTxDate(new Date().toISOString().slice(0, 10));
+      setArrivalNumber("");
+      setVehicleNumber("");
+      setLabourAmount("");
+      setVehicleRent("");
     } finally {
       setSaving(false);
     }
@@ -83,91 +108,109 @@ function NewTransactionModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="New Purchase Entry">
-      <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Buyer (Buy From) *</label>
-          <select
-            value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-            required
-          >
-            <option value="">Select buyer...</option>
-            {buyers.map((c) => (
-              <option key={c.id} value={c.id}>{c.name} — {c.phone}</option>
-            ))}
-          </select>
+      <form onSubmit={handleSubmit} className="space-y-3 max-h-[80vh] overflow-y-auto pr-1">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="col-span-2">
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Buyer (Buy From) *</label>
+            <select
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+              required
+            >
+              <option value="">Select buyer...</option>
+              {buyers.map((c) => (
+                <option key={c.id} value={c.id}>{c.name} — {c.phone}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Date</label>
+            <input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Arrival No.</label>
+            <input value={arrivalNumber} onChange={(e) => setArrivalNumber(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" placeholder="ARR-001" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Vehicle No.</label>
+            <input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" placeholder="MH-12-AB-1234" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Commission (2%)</label>
+            <input type="number" value={calculatedCommission || ""} readOnly
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg bg-gray-50 text-gray-600 outline-none" placeholder="Auto" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Labour</label>
+            <input type="number" value={labourAmount} onChange={(e) => setLabourAmount(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" placeholder="0" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Vehicle Rent</label>
+            <input type="number" value={vehicleRent} onChange={(e) => setVehicleRent(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" placeholder="0" />
+          </div>
         </div>
 
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700">Items *</label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-medium text-gray-700">Items *</label>
             <button type="button" onClick={addItem} className="text-xs text-green-600 hover:text-green-700 font-medium">
               + Add Item
             </button>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {items.map((item, idx) => (
-              <div key={idx} className="flex gap-2 items-start">
-                <input
-                  placeholder="Item name"
-                  value={item.itemName}
-                  onChange={(e) => updateItem(idx, "itemName", e.target.value)}
-                  className="flex-1 px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  required
-                />
-                <input
-                  placeholder="Qty"
-                  type="number"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(idx, "quantity", e.target.value)}
-                  className="w-16 px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  required
-                />
-                <select
-                  value={item.unit}
-                  onChange={(e) => updateItem(idx, "unit", e.target.value)}
-                  className="w-20 px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                >
-                  <option value="kg">kg</option>
-                  <option value="dozen">dozen</option>
-                  <option value="crate">crate</option>
-                  <option value="piece">piece</option>
-                </select>
-                <input
-                  placeholder="₹/unit"
-                  type="number"
-                  value={item.pricePerUnit}
-                  onChange={(e) => updateItem(idx, "pricePerUnit", e.target.value)}
-                  className="w-20 px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  required
-                />
-                {items.length > 1 && (
-                  <button type="button" onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600 px-1 text-sm">
-                    ✕
-                  </button>
-                )}
+              <div key={idx} className="border rounded-lg p-2 space-y-1.5">
+                <div className="flex gap-2 items-center">
+                  <input
+                    placeholder="Item name"
+                    value={item.itemName}
+                    onChange={(e) => updateItem(idx, "itemName", e.target.value)}
+                    className="flex-1 px-2 py-1 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                    required
+                  />
+                  {items.length > 1 && (
+                    <button type="button" onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600 px-1 text-sm shrink-0">
+                      ✕
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <input placeholder="Qty" type="number" value={item.quantity}
+                    onChange={(e) => updateItem(idx, "quantity", e.target.value)}
+                    className="px-2 py-1 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" required />
+                  <select value={item.unit} onChange={(e) => updateItem(idx, "unit", e.target.value)}
+                    className="px-2 py-1 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                    <option value="kg">kg</option>
+                    <option value="dozen">dozen</option>
+                    <option value="crate">crate</option>
+                    <option value="piece">piece</option>
+                  </select>
+                  <input placeholder="₹/unit" type="number" value={item.pricePerUnit}
+                    onChange={(e) => updateItem(idx, "pricePerUnit", e.target.value)}
+                    className="px-2 py-1 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" required />
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Total</label>
-            <div className="px-3 py-2 bg-gray-50 border rounded-lg text-sm font-semibold">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Total</label>
+            <div className="px-2.5 py-1.5 bg-gray-50 border rounded-lg text-sm font-semibold">
               ₹{totalAmount.toLocaleString("en-IN")}
             </div>
           </div>
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Paid Amount</label>
-            <input
-              type="number"
-              value={paidAmount}
-              onChange={(e) => setPaidAmount(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-              placeholder="0"
-            />
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Paid Amount</label>
+            <input type="number" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" placeholder="0" />
           </div>
         </div>
 
@@ -182,20 +225,20 @@ function NewTransactionModal({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+          <label className="block text-xs font-medium text-gray-700 mb-0.5">Notes</label>
           <input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+            className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
             placeholder="Optional notes..."
           />
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+        <div className="flex gap-3 pt-1">
+          <button type="button" onClick={onClose} className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm">
             Cancel
           </button>
-          <button type="submit" disabled={saving} className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+          <button type="submit" disabled={saving} className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm">
             {saving ? "Saving..." : "Save"}
           </button>
         </div>
@@ -204,8 +247,203 @@ function NewTransactionModal({
   );
 }
 
-function TransactionRow({ txn }: { txn: Transaction }) {
+function printInvoice(txn: Transaction) {
+  const w = window.open("", "_blank", "width=800,height=600");
+  if (!w) return;
+  const items = txn.items.map((it) =>
+    `<tr><td style="padding:4px 8px;border-bottom:1px solid #eee">${it.itemName}</td>
+     <td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right">${it.quantity} ${it.unit}</td>
+     <td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right">₹${Number(it.pricePerUnit).toLocaleString("en-IN")}</td>
+     <td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right">₹${Number(it.total).toLocaleString("en-IN")}</td></tr>`
+  ).join("");
+
+  const extras = [
+    txn.commissionAmount && Number(txn.commissionAmount) > 0 ? `<tr><td colspan="3" style="text-align:right;padding:2px 8px">Commission:</td><td style="text-align:right;padding:2px 8px">₹${Number(txn.commissionAmount).toLocaleString("en-IN")}</td></tr>` : "",
+    txn.labourAmount && Number(txn.labourAmount) > 0 ? `<tr><td colspan="3" style="text-align:right;padding:2px 8px">Labour:</td><td style="text-align:right;padding:2px 8px">₹${Number(txn.labourAmount).toLocaleString("en-IN")}</td></tr>` : "",
+    txn.vehicleRent && Number(txn.vehicleRent) > 0 ? `<tr><td colspan="3" style="text-align:right;padding:2px 8px">Vehicle Rent:</td><td style="text-align:right;padding:2px 8px">₹${Number(txn.vehicleRent).toLocaleString("en-IN")}</td></tr>` : "",
+  ].join("");
+
+  w.document.write(`<!DOCTYPE html><html><head><title>Invoice ${txn.invoiceNumber || txn.id.slice(0,8)}</title>
+    <style>body{font-family:system-ui,sans-serif;padding:24px;max-width:700px;margin:auto}
+    table{width:100%;border-collapse:collapse}th{text-align:left;padding:6px 8px;border-bottom:2px solid #333}
+    .header{display:flex;justify-content:space-between;align-items:start;margin-bottom:20px}
+    .title{font-size:24px;font-weight:bold}
+    .meta{font-size:13px;color:#555}
+    .footer{margin-top:20px;padding-top:12px;border-top:2px solid #333;display:flex;justify-content:space-between;font-size:14px}
+    @media print{button{display:none}}</style></head><body>
+    <div class="header"><div><div class="title">INVOICE</div>
+    <div class="meta">${txn.invoiceNumber || ""}</div></div>
+    <div style="text-align:right"><div class="meta">Date: ${new Date(txn.date).toLocaleDateString("en-IN")}</div>
+    ${txn.arrivalNumber ? `<div class="meta">Arrival: ${txn.arrivalNumber}</div>` : ""}
+    ${txn.vehicleNumber ? `<div class="meta">Vehicle: ${txn.vehicleNumber}</div>` : ""}</div></div>
+    <div style="margin-bottom:16px"><strong>Client:</strong> ${txn.client?.name || "—"} &nbsp;|&nbsp; ${txn.client?.phone || ""}</div>
+    <table><thead><tr><th>Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead>
+    <tbody>${items}${extras}</tbody></table>
+    <div class="footer"><div>Paid: ₹${Number(txn.paidAmount).toLocaleString("en-IN")}</div>
+    <div><strong>Total: ₹${Number(txn.totalAmount).toLocaleString("en-IN")}</strong></div></div>
+    ${Number(txn.balanceDue) > 0 ? `<div style="text-align:right;color:red;margin-top:4px">Balance Due: ₹${Number(txn.balanceDue).toLocaleString("en-IN")}</div>` : ""}
+    ${txn.notes ? `<div style="margin-top:12px;font-size:12px;color:#777">Notes: ${txn.notes}</div>` : ""}
+    <button onclick="window.print()" style="margin-top:20px;padding:8px 24px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px">Print</button>
+    </body></html>`);
+  w.document.close();
+}
+
+function EditTransactionModal({
+  isOpen,
+  onClose,
+  onSaved,
+  txn,
+  buyers,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+  txn: Transaction;
+  buyers: Client[];
+}) {
+  const [items, setItems] = useState(txn.items.map((i) => ({
+    itemName: i.itemName, quantity: String(i.quantity), unit: i.unit, pricePerUnit: String(i.pricePerUnit),
+  })));
+  const [paidAmount, setPaidAmount] = useState(String(txn.paidAmount));
+  const [notes, setNotes] = useState(txn.notes || "");
+  const [txDate, setTxDate] = useState(txn.date.slice(0, 10));
+  const [arrivalNumber, setArrivalNumber] = useState(txn.arrivalNumber || "");
+  const [vehicleNumber, setVehicleNumber] = useState(txn.vehicleNumber || "");
+  const [labourAmount, setLabourAmount] = useState(txn.labourAmount ? String(txn.labourAmount) : "");
+  const [vehicleRent, setVehicleRent] = useState(txn.vehicleRent ? String(txn.vehicleRent) : "");
+  const [saving, setSaving] = useState(false);
+
+  const addItem = () => setItems([...items, { itemName: "", quantity: "", unit: "kg", pricePerUnit: "" }]);
+  const updateItem = (idx: number, field: string, value: string) => {
+    const updated = [...items]; updated[idx] = { ...updated[idx], [field]: value }; setItems(updated);
+  };
+  const removeItem = (idx: number) => { if (items.length > 1) setItems(items.filter((_, i) => i !== idx)); };
+
+  const totalAmount = items.reduce((s, i) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.pricePerUnit) || 0), 0);
+
+  const calculatedCommission = (() => {
+    const labour = parseFloat(labourAmount) || 0;
+    const rent = parseFloat(vehicleRent) || 0;
+    return Math.max(0, Math.round((totalAmount - labour - rent) * 0.02 * 100) / 100);
+  })();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.updateTransaction(txn.id, {
+        items: items.map((i) => ({
+          itemName: i.itemName, quantity: parseFloat(i.quantity) || 0, unit: i.unit, pricePerUnit: parseFloat(i.pricePerUnit) || 0,
+        })),
+        paidAmount: parseFloat(paidAmount) || 0,
+        notes, date: txDate,
+        arrivalNumber: arrivalNumber || undefined,
+        vehicleNumber: vehicleNumber || undefined,
+        commissionAmount: calculatedCommission > 0 ? calculatedCommission : undefined,
+        labourAmount: labourAmount ? parseFloat(labourAmount) : undefined,
+        vehicleRent: vehicleRent ? parseFloat(vehicleRent) : undefined,
+      });
+      onSaved();
+      onClose();
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Purchase Entry">
+      <form onSubmit={handleSubmit} className="space-y-3 max-h-[80vh] overflow-y-auto pr-1">
+        <div className="px-2.5 py-1.5 bg-gray-50 border rounded-lg text-sm text-gray-600">
+          Client: <strong>{txn.client?.name}</strong> &nbsp;|&nbsp; Invoice: <strong>{txn.invoiceNumber || "—"}</strong>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Date</label>
+            <input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Arrival No.</label>
+            <input value={arrivalNumber} onChange={(e) => setArrivalNumber(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Vehicle No.</label>
+            <input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Commission (2%)</label>
+            <input type="number" value={calculatedCommission || ""} readOnly
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg bg-gray-50 text-gray-600 outline-none" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Labour</label>
+            <input type="number" value={labourAmount} onChange={(e) => setLabourAmount(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" placeholder="0" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Vehicle Rent</label>
+            <input type="number" value={vehicleRent} onChange={(e) => setVehicleRent(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" placeholder="0" />
+          </div>
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-medium text-gray-700">Items *</label>
+            <button type="button" onClick={addItem} className="text-xs text-green-600 hover:text-green-700 font-medium">+ Add Item</button>
+          </div>
+          <div className="space-y-2">
+            {items.map((item, idx) => (
+              <div key={idx} className="border rounded-lg p-2 space-y-1.5">
+                <div className="flex gap-2 items-center">
+                  <input placeholder="Item name" value={item.itemName} onChange={(e) => updateItem(idx, "itemName", e.target.value)}
+                    className="flex-1 px-2 py-1 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" required />
+                  {items.length > 1 && <button type="button" onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600 text-sm">✕</button>}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <input placeholder="Qty" type="number" value={item.quantity} onChange={(e) => updateItem(idx, "quantity", e.target.value)}
+                    className="px-2 py-1 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" required />
+                  <select value={item.unit} onChange={(e) => updateItem(idx, "unit", e.target.value)}
+                    className="px-2 py-1 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                    <option value="kg">kg</option><option value="dozen">dozen</option><option value="crate">crate</option><option value="piece">piece</option>
+                  </select>
+                  <input placeholder="₹/unit" type="number" value={item.pricePerUnit} onChange={(e) => updateItem(idx, "pricePerUnit", e.target.value)}
+                    className="px-2 py-1 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" required />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Total</label>
+            <div className="px-2.5 py-1.5 bg-gray-50 border rounded-lg text-sm font-semibold">₹{totalAmount.toLocaleString("en-IN")}</div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Paid Amount</label>
+            <input type="number" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)}
+              className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-0.5">Notes</label>
+          <input value={notes} onChange={(e) => setNotes(e.target.value)}
+            className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" placeholder="Optional notes..." />
+        </div>
+        <div className="flex gap-3 pt-1">
+          <button type="button" onClick={onClose} className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm">Cancel</button>
+          <button type="submit" disabled={saving} className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm">
+            {saving ? "Saving..." : "Update"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function TransactionRow({ txn, onEdit, onDelete, buyers }: { txn: Transaction; onEdit: () => void; onDelete: () => void; buyers: Client[] }) {
   const [expanded, setExpanded] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -216,7 +454,10 @@ function TransactionRow({ txn }: { txn: Transaction }) {
         <div className="flex items-center gap-4 text-left">
           <div>
             <p className="font-semibold">{txn.client?.name || "Unknown"}</p>
-            <p className="text-xs text-gray-400">{new Date(txn.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
+            <p className="text-xs text-gray-400">
+              {txn.invoiceNumber && <span className="text-gray-500 font-mono mr-2">{txn.invoiceNumber}</span>}
+              {new Date(txn.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -234,6 +475,13 @@ function TransactionRow({ txn }: { txn: Transaction }) {
 
       {expanded && (
         <div className="px-5 pb-4 border-t border-gray-100">
+          {/* Meta info */}
+          {(txn.arrivalNumber || txn.vehicleNumber) && (
+            <div className="flex gap-4 mt-2 text-xs text-gray-500">
+              {txn.arrivalNumber && <span>Arrival: {txn.arrivalNumber}</span>}
+              {txn.vehicleNumber && <span>Vehicle: {txn.vehicleNumber}</span>}
+            </div>
+          )}
           <table className="w-full text-sm mt-3">
             <thead>
               <tr className="text-gray-500 text-xs">
@@ -254,11 +502,47 @@ function TransactionRow({ txn }: { txn: Transaction }) {
               ))}
             </tbody>
           </table>
+          {/* Extras */}
+          {(Number(txn.commissionAmount) > 0 || Number(txn.labourAmount) > 0 || Number(txn.vehicleRent) > 0) && (
+            <div className="flex gap-4 mt-2 text-xs text-gray-500 border-t border-gray-100 pt-2">
+              {Number(txn.commissionAmount) > 0 && <span>Commission: ₹{Number(txn.commissionAmount).toLocaleString("en-IN")}</span>}
+              {Number(txn.labourAmount) > 0 && <span>Labour: ₹{Number(txn.labourAmount).toLocaleString("en-IN")}</span>}
+              {Number(txn.vehicleRent) > 0 && <span>V.Rent: ₹{Number(txn.vehicleRent).toLocaleString("en-IN")}</span>}
+            </div>
+          )}
           <div className="flex justify-between mt-3 pt-2 border-t border-gray-100 text-sm">
             <span className="text-gray-500">Paid: ₹{Number(txn.paidAmount).toLocaleString("en-IN")}</span>
             <span className="font-semibold">Total: ₹{Number(txn.totalAmount).toLocaleString("en-IN")}</span>
           </div>
           {txn.notes && <p className="text-xs text-gray-400 mt-2 italic">{txn.notes}</p>}
+          <div className="flex gap-2 mt-3 pt-2 border-t border-gray-100">
+            <button onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+              <Pencil className="w-3.5 h-3.5" /> Edit
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); printInvoice(txn); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+              <Printer className="w-3.5 h-3.5" /> Invoice
+            </button>
+            {!confirmDelete ? (
+              <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition">
+                <Trash2 className="w-3.5 h-3.5" /> Delete
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <button onClick={async (e) => { e.stopPropagation(); setDeleting(true); await api.deleteTransaction(txn.id); onDelete(); }}
+                  disabled={deleting}
+                  className="px-3 py-1.5 text-xs text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition">
+                  {deleting ? "Deleting..." : "Confirm"}
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }}
+                  className="px-3 py-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -270,6 +554,7 @@ export default function BuyFromPage() {
   const [buyers, setBuyers] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editTxn, setEditTxn] = useState<Transaction | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -335,7 +620,7 @@ export default function BuyFromPage() {
       ) : (
         <div className="space-y-3">
           {transactions.map((txn) => (
-            <TransactionRow key={txn.id} txn={txn} />
+            <TransactionRow key={txn.id} txn={txn} onEdit={() => setEditTxn(txn)} onDelete={loadData} buyers={buyers} />
           ))}
         </div>
       )}
@@ -346,6 +631,16 @@ export default function BuyFromPage() {
         onSaved={loadData}
         buyers={buyers}
       />
+
+      {editTxn && (
+        <EditTransactionModal
+          isOpen={!!editTxn}
+          onClose={() => setEditTxn(null)}
+          onSaved={loadData}
+          txn={editTxn}
+          buyers={buyers}
+        />
+      )}
     </div>
   );
 }

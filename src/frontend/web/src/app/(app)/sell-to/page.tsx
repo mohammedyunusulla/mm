@@ -108,45 +108,49 @@ function NewSaleModal({
           </div>
           <div className="space-y-3">
             {items.map((item, idx) => (
-              <div key={idx} className="flex gap-2 items-start">
-                <input
-                  placeholder="Item name"
-                  value={item.itemName}
-                  onChange={(e) => updateItem(idx, "itemName", e.target.value)}
-                  className="flex-1 px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  required
-                />
-                <input
-                  placeholder="Qty"
-                  type="number"
-                  value={item.quantity}
-                  onChange={(e) => updateItem(idx, "quantity", e.target.value)}
-                  className="w-16 px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  required
-                />
-                <select
-                  value={item.unit}
-                  onChange={(e) => updateItem(idx, "unit", e.target.value)}
-                  className="w-20 px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                >
-                  <option value="kg">kg</option>
-                  <option value="dozen">dozen</option>
-                  <option value="crate">crate</option>
-                  <option value="piece">piece</option>
-                </select>
-                <input
-                  placeholder="₹/unit"
-                  type="number"
-                  value={item.pricePerUnit}
-                  onChange={(e) => updateItem(idx, "pricePerUnit", e.target.value)}
-                  className="w-20 px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  required
-                />
-                {items.length > 1 && (
-                  <button type="button" onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600 px-1 text-sm">
-                    ✕
-                  </button>
-                )}
+              <div key={idx} className="border rounded-lg p-2.5 space-y-2">
+                <div className="flex gap-2 items-center">
+                  <input
+                    placeholder="Item name"
+                    value={item.itemName}
+                    onChange={(e) => updateItem(idx, "itemName", e.target.value)}
+                    className="flex-1 px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                    required
+                  />
+                  {items.length > 1 && (
+                    <button type="button" onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600 px-1 text-sm shrink-0">
+                      ✕
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    placeholder="Qty"
+                    type="number"
+                    value={item.quantity}
+                    onChange={(e) => updateItem(idx, "quantity", e.target.value)}
+                    className="px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                    required
+                  />
+                  <select
+                    value={item.unit}
+                    onChange={(e) => updateItem(idx, "unit", e.target.value)}
+                    className="px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                  >
+                    <option value="kg">kg</option>
+                    <option value="dozen">dozen</option>
+                    <option value="crate">crate</option>
+                    <option value="piece">piece</option>
+                  </select>
+                  <input
+                    placeholder="₹/unit"
+                    type="number"
+                    value={item.pricePerUnit}
+                    onChange={(e) => updateItem(idx, "pricePerUnit", e.target.value)}
+                    className="px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                    required
+                  />
+                </div>
               </div>
             ))}
           </div>

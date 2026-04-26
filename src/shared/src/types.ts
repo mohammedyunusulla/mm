@@ -5,9 +5,10 @@ export interface Client {
   id: string;
   name: string;
   phone: string;
-  address: string;
+  address?: string;
   type: ClientType;
   notes?: string;
+  imageUrl?: string;
   balanceDue: number;
   advanceBalance: number;
   createdAt: string;
@@ -40,6 +41,7 @@ export interface TransactionItem {
 
 export interface Transaction {
   id: string;
+  invoiceNumber?: string;
   clientId: string;
   client?: Client;
   type: TransactionType;
@@ -48,6 +50,11 @@ export interface Transaction {
   paidAmount: number;
   balanceDue: number;
   notes?: string;
+  arrivalNumber?: string;
+  vehicleNumber?: string;
+  commissionAmount?: number;
+  labourAmount?: number;
+  vehicleRent?: number;
   date: string;
   createdAt: string;
   updatedAt: string;

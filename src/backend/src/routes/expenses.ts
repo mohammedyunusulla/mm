@@ -1,10 +1,16 @@
 import { Router } from "express";
 import { z } from "zod";
-import { authenticate } from "../middleware/auth";
+import { authenticate, requireWriteAccess } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 
 const router = Router();
 router.use(authenticate);
+
+// Block writes when subscription is in read-only mode
+router.post("*", requireWriteAccess);
+router.put("*", requireWriteAccess);
+router.patch("*", requireWriteAccess);
+router.delete("*", requireWriteAccess);
 
 const expenseSchema = z.object({
   category: z.enum(["LABOUR", "TRANSPORT", "RENT", "UTILITIES", "MAINTENANCE", "OTHER"]),

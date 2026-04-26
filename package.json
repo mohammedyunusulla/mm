@@ -12,6 +12,8 @@
     "dev:mobile": "npm run dev --workspace=src/frontend/mobile",
     "dev:api": "npm run dev --workspace=src/backend",
     "build:web": "npm run build --workspace=src/frontend/web",
+    "db:generate": "npm run db:generate --workspace=src/backend",
+    "db:seed": "npm run db:seed --workspace=src/backend",
     "dev": "npm run dev:web"
   },
   "engines": {

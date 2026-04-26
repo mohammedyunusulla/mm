@@ -21,6 +21,7 @@ router.get("/dashboard", async (req, res) => {
       todayExpensesAgg,
       totalReceivableAgg,
       totalPayableAgg,
+      recentTransactions,
     ] = await Promise.all([
       db.client.count({ where: { type: "BUYER" } }),
       db.client.count({ where: { type: "SELLER" } }),
@@ -38,6 +39,11 @@ router.get("/dashboard", async (req, res) => {
       }),
       db.client.aggregate({ where: { type: "BUYER" }, _sum: { balanceDue: true } }),
       db.client.aggregate({ where: { type: "SELLER" }, _sum: { balanceDue: true } }),
+      db.transaction.findMany({
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        include: { client: true, items: true },
+      }),
     ]);
 
     res.json({
@@ -50,6 +56,18 @@ router.get("/dashboard", async (req, res) => {
         todayExpenses: Number(todayExpensesAgg._sum.amount ?? 0),
         totalReceivable: Number(totalReceivableAgg._sum.balanceDue ?? 0),
         totalPayable: Number(totalPayableAgg._sum.balanceDue ?? 0),
+        recentTransactions: recentTransactions.map((t: Record<string, unknown>) => ({
+          ...t,
+          totalAmount: Number(t.totalAmount),
+          paidAmount: Number(t.paidAmount),
+          balanceDue: Number(t.balanceDue),
+          items: (t.items as Array<Record<string, unknown>>).map((i) => ({
+            ...i,
+            quantity: Number(i.quantity),
+            pricePerUnit: Number(i.pricePerUnit),
+            total: Number(i.total),
+          })),
+        })),
       },
     });
   } catch (err) {

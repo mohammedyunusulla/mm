@@ -16,14 +16,25 @@ datasource db {
 
 // ── Mandi tenants ─────────────────────────────────────────────────
 model Tenant {
-  id         String   @id @default(uuid())
-  slug       String   @unique          // "sharma-mandi" – used at login
-  name       String                    // "Sharma Mandi"
-  dbUrl      String                    // postgres connection string to their private DB
-  adminEmail String                    // display only – actual creds live in tenant DB
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                  String     @id @default(uuid())
+  slug                String     @unique          // "sharma-mandi" – used at login
+  name                String                      // "Sharma Mandi"
+  phone               String                      // primary contact number
+  dbUrl               String                      // postgres connection string to their private DB
+  adminEmail          String                      // display only – actual creds live in tenant DB
+  isActive            Boolean    @default(true)
+  plan                PlanTier   @default(TRIAL)
+  subscriptionEndDate DateTime                    // when the subscription expires
+  maxUsers            Int        @default(2)
+  maxClients          Int        @default(20)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+}
+
+enum PlanTier {
+  TRIAL
+  STANDARD
+  PREMIUM
 }
 
 // ── Platform superusers ───────────────────────────────────────────

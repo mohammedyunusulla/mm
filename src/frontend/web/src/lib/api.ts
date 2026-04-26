@@ -85,6 +85,19 @@ export const api = USE_MOCK
         fetchApi(`/api/clients/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(data) }),
       deleteClient: (id: string) =>
         fetchApi(`/api/clients/${encodeURIComponent(id)}`, { method: "DELETE" }),
+      uploadClientImage: async (id: string, file: File) => {
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        const formData = new FormData();
+        formData.append("image", file);
+        const res = await fetch(`${API_URL}/api/clients/${encodeURIComponent(id)}/image`, {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: formData,
+        });
+        return res.json();
+      },
+      deleteClientImage: (id: string) =>
+        fetchApi(`/api/clients/${encodeURIComponent(id)}/image`, { method: "DELETE" }),
       addAdvancePayment: (clientId: string, amount: number, note?: string, date?: string) =>
         fetchApi(`/api/clients/${encodeURIComponent(clientId)}/advance`, {
           method: "POST",
@@ -105,6 +118,10 @@ export const api = USE_MOCK
       },
       createTransaction: (data: Record<string, unknown>) =>
         fetchApi("/api/transactions", { method: "POST", body: JSON.stringify(data) }),
+      updateTransaction: (id: string, data: Record<string, unknown>) =>
+        fetchApi(`/api/transactions/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(data) }),
+      deleteTransaction: (id: string) =>
+        fetchApi(`/api/transactions/${encodeURIComponent(id)}`, { method: "DELETE" }),
       // Expenses
       getExpenses: (category?: string) => {
         const params = new URLSearchParams();

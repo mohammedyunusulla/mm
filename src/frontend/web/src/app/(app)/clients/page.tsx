@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Plus, Search, Phone, MapPin, X, Pencil, Trash2, IndianRupee, FileText, Clock, ChevronRight, Wallet, Printer, Check } from "lucide-react";
+import { Plus, Search, Phone, MapPin, X, Pencil, Trash2, IndianRupee, FileText, Clock, ChevronRight, Wallet, Printer, Check, Camera } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { Client, ClientType, Transaction, AdvancePayment } from "@mandi/shared";
@@ -9,6 +9,8 @@ import Modal from "@/components/Modal";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import EmptyState from "@/components/EmptyState";
 import { useDebounce } from "@/hooks/useDebounce";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 function ClientModal({
   isOpen,
@@ -31,30 +33,52 @@ function ClientModal({
     notes: "",
   });
   const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editClient) {
       setForm({
         name: editClient.name,
         phone: editClient.phone,
-        address: editClient.address,
+        address: editClient.address || "",
         type: editClient.type,
         notes: editClient.notes || "",
       });
+      setImagePreview(editClient.imageUrl ? `${API_URL}${editClient.imageUrl}` : null);
     } else {
       setForm({ name: "", phone: "", address: "", type: clientType, notes: "" });
+      setImagePreview(null);
     }
+    setImageFile(null);
   }, [editClient, clientType]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
+      let clientId = editClient?.id;
       if (editClient) {
         await api.updateClient(editClient.id, form);
       } else {
-        await api.createClient(form);
+        const result = await api.createClient(form);
+        clientId = result.data?.id;
       }
+
+      // Upload image if selected
+      if (imageFile && clientId) {
+        await api.uploadClientImage(clientId, imageFile);
+      }
+
       onSaved();
       onClose();
     } finally {
@@ -67,6 +91,38 @@ function ClientModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Image upload */}
+        <div className="flex justify-center">
+          <div className="relative">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="w-20 h-20 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-green-500 hover:bg-green-50 transition overflow-hidden"
+            >
+              {imagePreview ? (
+                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+              ) : (
+                <Camera className="w-6 h-6 text-gray-400" />
+              )}
+            </div>
+            {imagePreview && (
+              <button
+                type="button"
+                onClick={() => { setImageFile(null); setImagePreview(null); }}
+                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleImageChange}
+              className="hidden"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 text-center">Click to upload photo</p>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
           <input
@@ -86,21 +142,11 @@ function ClientModal({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
           <input
             value={form.address}
             onChange={(e) => setForm({ ...form, address: e.target.value })}
             className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-          <textarea
-            value={form.notes}
-            onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-            rows={2}
           />
         </div>
         <div className="flex gap-3 pt-2">
@@ -302,7 +348,7 @@ function AdvancePaymentModal({
     try {
       const res = await api.addAdvancePayment(client.id, amt, note, date);
       const newBalance = (res.success && res.data)
-        ? Number((res.data as Client).advanceBalance)
+        ? Number((res.data as { updatedClient: Client }).updatedClient.advanceBalance)
         : Number(client.advanceBalance) + amt;
       onBalanceChange(newBalance);
       setAmount("");

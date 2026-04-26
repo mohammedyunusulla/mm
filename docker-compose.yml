@@ -1,0 +1,27 @@
+# Mandi Manager — Local Development PostgreSQL
+# Run:  docker compose up -d
+# Stop: docker compose down
+# Reset: docker compose down -v  (deletes all data)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mandi-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: mandi
+      POSTGRES_PASSWORD: mandi_local_pwd
+      POSTGRES_DB: mandi_master
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mandi"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:

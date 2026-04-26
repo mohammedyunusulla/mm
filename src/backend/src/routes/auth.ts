@@ -5,7 +5,7 @@ import { masterDb } from "../lib/masterDb";
 import { getTenantDb } from "../lib/tenantDb";
 import { signToken } from "../lib/jwt";
 import { validate } from "../middleware/validate";
-import { authenticate, requireAdmin } from "../middleware/auth";
+import { authenticate, requireAdmin, requireWriteAccess, computeSubscriptionStatus } from "../middleware/auth";
 
 const router = Router();
 
@@ -14,14 +14,14 @@ const router = Router();
 // 1. Find tenant by slug in master DB → get dbUrl
 // 2. Connect to tenant DB → verify user credentials
 const loginSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().min(1, "Email or phone is required"),
   password: z.string().min(1),
   tenantSlug: z.string().min(1),
 });
 
 router.post("/login", validate(loginSchema), async (req, res) => {
   try {
-    const { email, password, tenantSlug } = req.body as z.infer<typeof loginSchema>;
+    const { identifier, password, tenantSlug } = req.body as z.infer<typeof loginSchema>;
 
     // Step 1: find tenant in master DB
     const tenant = await masterDb.tenant.findUnique({ where: { slug: tenantSlug } });
@@ -30,9 +30,23 @@ router.post("/login", validate(loginSchema), async (req, res) => {
       return;
     }
 
-    // Step 2: connect to tenant DB and verify user
+    // Step 1b: check subscription status
+    const { status: subStatus, daysRemaining } = computeSubscriptionStatus(tenant.subscriptionEndDate);
+    if (subStatus === "BLOCKED") {
+      res.status(403).json({
+        success: false,
+        error: "Your subscription has expired. Please contact your administrator to renew.",
+        code: "SUBSCRIPTION_EXPIRED",
+      });
+      return;
+    }
+
+    // Step 2: connect to tenant DB and verify user by email or phone
     const db = getTenantDb(tenant.dbUrl);
-    const user = await db.user.findUnique({ where: { email } });
+    const isEmail = identifier.includes("@");
+    const user = isEmail
+      ? await db.user.findUnique({ where: { email: identifier } })
+      : await db.user.findUnique({ where: { phone: identifier } });
 
     if (!user || !user.isActive) {
       res.status(401).json({ success: false, error: "Invalid credentials" });
@@ -53,6 +67,11 @@ router.post("/login", validate(loginSchema), async (req, res) => {
         token,
         user: { id: user.id, name: user.name, email: user.email, role: user.role },
         tenant: { id: tenant.id, name: tenant.name, slug: tenant.slug },
+        subscription: {
+          status: subStatus,
+          daysRemaining,
+          plan: tenant.plan,
+        },
       },
     });
   } catch (err) {
@@ -67,7 +86,7 @@ router.get("/me", authenticate, async (req, res) => {
   try {
     const user = await req.db!.user.findUnique({
       where: { id: req.user!.userId },
-      select: { id: true, name: true, email: true, role: true },
+      select: { id: true, name: true, email: true, phone: true, role: true },
     });
     if (!user) { res.status(404).json({ success: false, error: "User not found" }); return; }
     res.json({ success: true, data: { ...user, tenantId: req.user!.tenantId } });
@@ -81,25 +100,35 @@ router.get("/me", authenticate, async (req, res) => {
 // POST /api/auth/users
 const createUserSchema = z.object({
   name: z.string().min(2).max(100),
-  email: z.string().email(),
+  email: z.string().email().optional(),
+  phone: z.string().min(10).max(15).optional(),
   password: z.string().min(8),
   role: z.enum(["ADMIN", "MANAGER"]).default("MANAGER"),
-});
+}).refine(data => data.email || data.phone, { message: "Email or phone is required" });
 
-router.post("/users", authenticate, requireAdmin, validate(createUserSchema), async (req, res) => {
+router.post("/users", authenticate, requireAdmin, requireWriteAccess, validate(createUserSchema), async (req, res) => {
   try {
-    const { name, email, password, role } = req.body as z.infer<typeof createUserSchema>;
+    const { name, email, phone, password, role } = req.body as z.infer<typeof createUserSchema>;
 
-    const exists = await req.db!.user.findUnique({ where: { email } });
-    if (exists) {
-      res.status(409).json({ success: false, error: "Email already exists" });
-      return;
+    if (email) {
+      const exists = await req.db!.user.findUnique({ where: { email } });
+      if (exists) {
+        res.status(409).json({ success: false, error: "Email already exists" });
+        return;
+      }
+    }
+    if (phone) {
+      const exists = await req.db!.user.findUnique({ where: { phone } });
+      if (exists) {
+        res.status(409).json({ success: false, error: "Phone already exists" });
+        return;
+      }
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await req.db!.user.create({
-      data: { name, email, passwordHash, role },
-      select: { id: true, name: true, email: true, role: true, isActive: true },
+      data: { name, email, phone, passwordHash, role },
+      select: { id: true, name: true, email: true, phone: true, role: true, isActive: true },
     });
 
     res.status(201).json({ success: true, data: user });
@@ -114,7 +143,7 @@ router.post("/users", authenticate, requireAdmin, validate(createUserSchema), as
 router.get("/users", authenticate, requireAdmin, async (req, res) => {
   try {
     const users = await req.db!.user.findMany({
-      select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
+      select: { id: true, name: true, email: true, phone: true, role: true, isActive: true, createdAt: true },
       orderBy: { createdAt: "asc" },
     });
     res.json({ success: true, data: users });
@@ -144,6 +173,34 @@ router.patch("/users/:id", authenticate, requireAdmin, async (req, res) => {
 
     await req.db!.user.update({ where: { id: req.params.id as string }, data: { isActive } });
     res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// ── Change own password ───────────────────────────────────────────
+// PATCH /api/auth/password
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8, "New password must be at least 8 characters"),
+});
+
+router.patch("/password", authenticate, validate(changePasswordSchema), async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body as z.infer<typeof changePasswordSchema>;
+    const user = await req.db!.user.findUnique({ where: { id: req.user!.userId } });
+    if (!user) { res.status(404).json({ success: false, error: "User not found" }); return; }
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      res.status(401).json({ success: false, error: "Current password is incorrect" });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await req.db!.user.update({ where: { id: user.id }, data: { passwordHash } });
+    res.json({ success: true, message: "Password updated" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: "Server error" });

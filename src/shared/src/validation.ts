@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // ── Auth Validation ──
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  identifier: z.string().min(1, "Email or phone number is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -10,7 +10,7 @@ export const loginSchema = z.object({
 export const clientSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   phone: z.string().min(10, "Phone must be at least 10 digits").max(15),
-  address: z.string().min(1, "Address is required").max(500),
+  address: z.string().max(500).optional(),
   type: z.enum(["BUYER", "SELLER"]),
   notes: z.string().max(1000).optional(),
 });
