@@ -11,6 +11,7 @@ type SubStatus = "ACTIVE" | "GRACE" | "READONLY" | "BLOCKED";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
+  const [authChecked, setAuthChecked] = useState(false);
   const [subStatus, setSubStatus] = useState<SubStatus | null>(null);
   const [daysRemaining, setDaysRemaining] = useState(0);
   const [userName, setUserName] = useState("");
@@ -19,6 +20,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
     try {
       const raw = localStorage.getItem("subscription");
       if (raw) {
@@ -33,7 +40,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (name) setUserName(name);
       if (email) setUserEmail(email);
     } catch {}
-  }, []);
+    setAuthChecked(true);
+  }, [router]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -51,8 +59,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     localStorage.removeItem("subscription");
     localStorage.removeItem("userName");
     localStorage.removeItem("userEmail");
-    window.location.href = "/";
+    window.location.href = "/login";
   };
+
+  if (!authChecked) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen">

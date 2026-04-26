@@ -29,7 +29,7 @@ async function fetchApi<T>(
 
   if (res.status === 401 && typeof window !== "undefined") {
     localStorage.removeItem("token");
-    window.location.href = "/";
+    window.location.href = "/login";
     return { success: false, error: "Unauthorized" };
   }
 
