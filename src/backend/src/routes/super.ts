@@ -219,7 +219,8 @@ const updateMandiSchema = z.object({
 
 router.patch("/mandis/:id", validate(updateMandiSchema), async (req, res) => {
   try {
-    const tenant = await masterDb.tenant.findUnique({ where: { id: req.params.id } });
+    const id = req.params.id as string;
+    const tenant = await masterDb.tenant.findUnique({ where: { id } });
     if (!tenant) { res.status(404).json({ success: false, error: "Mandi not found" }); return; }
 
     const { isActive, name, slug, phone, adminEmail, plan } = req.body as z.infer<typeof updateMandiSchema>;
@@ -258,7 +259,7 @@ router.patch("/mandis/:id", validate(updateMandiSchema), async (req, res) => {
     }
 
     const updated = await masterDb.tenant.update({
-      where: { id: req.params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true, slug: true, name: true, phone: true, adminEmail: true,
@@ -284,7 +285,8 @@ const resetMandiPasswordSchema = z.object({
 
 router.patch("/mandis/:id/reset-password", validate(resetMandiPasswordSchema), async (req, res) => {
   try {
-    const tenant = await masterDb.tenant.findUnique({ where: { id: req.params.id } });
+    const id = req.params.id as string;
+    const tenant = await masterDb.tenant.findUnique({ where: { id } });
     if (!tenant) { res.status(404).json({ success: false, error: "Mandi not found" }); return; }
 
     const { newPassword } = req.body as z.infer<typeof resetMandiPasswordSchema>;
@@ -311,7 +313,8 @@ const addCreditsSchema = z.object({
 
 router.post("/mandis/:id/credits", validate(addCreditsSchema), async (req, res) => {
   try {
-    const tenant = await masterDb.tenant.findUnique({ where: { id: req.params.id } });
+    const id = req.params.id as string;
+    const tenant = await masterDb.tenant.findUnique({ where: { id } });
     if (!tenant) { res.status(404).json({ success: false, error: "Mandi not found" }); return; }
 
     const { days } = req.body as z.infer<typeof addCreditsSchema>;
@@ -324,7 +327,7 @@ router.post("/mandis/:id/credits", validate(addCreditsSchema), async (req, res) 
     newEndDate.setDate(newEndDate.getDate() + days);
 
     const updated = await masterDb.tenant.update({
-      where: { id: req.params.id },
+      where: { id },
       data: { subscriptionEndDate: newEndDate },
       select: {
         id: true, slug: true, name: true,
@@ -501,12 +504,13 @@ const resetAdminPasswordSchema = z.object({
 
 router.patch("/admins/:id/reset-password", validate(resetAdminPasswordSchema), async (req, res) => {
   try {
-    const admin = await masterDb.superUser.findUnique({ where: { id: req.params.id } });
+    const id = req.params.id as string;
+    const admin = await masterDb.superUser.findUnique({ where: { id } });
     if (!admin) { res.status(404).json({ success: false, error: "Admin not found" }); return; }
 
     const { newPassword } = req.body as z.infer<typeof resetAdminPasswordSchema>;
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await masterDb.superUser.update({ where: { id: req.params.id }, data: { passwordHash } });
+    await masterDb.superUser.update({ where: { id }, data: { passwordHash } });
     res.json({ success: true, message: "Password reset successfully" });
   } catch (err) {
     console.error(err);

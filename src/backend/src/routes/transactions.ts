@@ -175,8 +175,9 @@ const updateSchema = z.object({
 router.put("/:id", validate(updateSchema), async (req, res) => {
   try {
     const db = req.db!;
+    const id = req.params.id as string;
     const existing = await db.transaction.findUnique({
-      where: { id: req.params.id },
+      where: { id },
       include: { items: true },
     });
     if (!existing) { res.status(404).json({ success: false, error: "Transaction not found" }); return; }

@@ -130,7 +130,8 @@ router.delete("/:id", async (req, res) => {
 // ── POST /api/clients/:id/image ───────────────────────────────────────────
 router.post("/:id/image", upload.single("image"), async (req, res) => {
   try {
-    const client = await req.db!.client.findUnique({ where: { id: req.params.id } });
+    const id = req.params.id as string;
+    const client = await req.db!.client.findUnique({ where: { id } });
     if (!client) { res.status(404).json({ success: false, error: "Client not found" }); return; }
     if (!req.file) { res.status(400).json({ success: false, error: "No image file provided" }); return; }
 
@@ -141,7 +142,7 @@ router.post("/:id/image", upload.single("image"), async (req, res) => {
     }
 
     const imageUrl = `/uploads/clients/${req.file.filename}`;
-    await req.db!.client.update({ where: { id: req.params.id }, data: { imageUrl } });
+    await req.db!.client.update({ where: { id }, data: { imageUrl } });
     res.json({ success: true, data: { imageUrl } });
   } catch (err) {
     console.error(err);
@@ -152,7 +153,8 @@ router.post("/:id/image", upload.single("image"), async (req, res) => {
 // ── DELETE /api/clients/:id/image ─────────────────────────────────────────
 router.delete("/:id/image", async (req, res) => {
   try {
-    const client = await req.db!.client.findUnique({ where: { id: req.params.id } });
+    const id = req.params.id as string;
+    const client = await req.db!.client.findUnique({ where: { id } });
     if (!client) { res.status(404).json({ success: false, error: "Client not found" }); return; }
 
     if (client.imageUrl) {
@@ -160,7 +162,7 @@ router.delete("/:id/image", async (req, res) => {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
 
-    await req.db!.client.update({ where: { id: req.params.id }, data: { imageUrl: null } });
+    await req.db!.client.update({ where: { id }, data: { imageUrl: null } });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
