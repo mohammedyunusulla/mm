@@ -71,7 +71,7 @@ function ClientModal({
         await api.updateClient(editClient.id, form);
       } else {
         const result = await api.createClient(form);
-        clientId = result.data?.id;
+        clientId = (result.data as { id?: string })?.id;
       }
 
       // Upload image if selected
