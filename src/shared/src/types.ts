@@ -49,6 +49,7 @@ export interface Transaction {
   totalAmount: number;
   paidAmount: number;
   balanceDue: number;
+  advanceUsed?: number;
   notes?: string;
   arrivalNumber?: string;
   vehicleNumber?: string;

@@ -46,17 +46,19 @@ function NewTransactionModal({
     if (items.length > 1) setItems(items.filter((_, i) => i !== idx));
   };
 
-  const totalAmount = items.reduce((sum, item) => {
+  const calculatedAmount = items.reduce((sum, item) => {
     const qty = parseFloat(item.quantity) || 0;
     const price = parseFloat(item.pricePerUnit) || 0;
     return sum + qty * price;
   }, 0);
 
+  const labour = parseFloat(labourAmount) || 0;
+  const rent = parseFloat(vehicleRent) || 0;
+  const totalAmount = calculatedAmount - labour - rent;
+
   // Auto-calculate commission: 2% of (Total - Labour - Vehicle Rent)
   const calculatedCommission = (() => {
-    const labour = parseFloat(labourAmount) || 0;
-    const rent = parseFloat(vehicleRent) || 0;
-    const base = totalAmount - labour - rent;
+    const base = calculatedAmount - labour - rent;
     return Math.max(0, Math.round(base * 0.02 * 100) / 100);
   })();
 
@@ -319,12 +321,15 @@ function EditTransactionModal({
   };
   const removeItem = (idx: number) => { if (items.length > 1) setItems(items.filter((_, i) => i !== idx)); };
 
-  const totalAmount = items.reduce((s, i) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.pricePerUnit) || 0), 0);
+  const calculatedAmount = items.reduce((s, i) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.pricePerUnit) || 0), 0);
+
+  const labour = parseFloat(labourAmount) || 0;
+  const rent = parseFloat(vehicleRent) || 0;
+  const totalAmount = calculatedAmount - labour - rent;
 
   const calculatedCommission = (() => {
-    const labour = parseFloat(labourAmount) || 0;
-    const rent = parseFloat(vehicleRent) || 0;
-    return Math.max(0, Math.round((totalAmount - labour - rent) * 0.02 * 100) / 100);
+    const base = calculatedAmount - labour - rent;
+    return Math.max(0, Math.round(base * 0.02 * 100) / 100);
   })();
 
   const handleSubmit = async (e: React.FormEvent) => {

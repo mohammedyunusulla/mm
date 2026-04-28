@@ -102,7 +102,8 @@ router.post("/", validate(createSchema), async (req, res) => {
     const client = await db.client.findUnique({ where: { id: clientId } });
     if (!client) { res.status(404).json({ success: false, error: "Client not found" }); return; }
 
-    const totalAmount = items.reduce((s: number, i: z.infer<typeof itemSchema>) => s + i.quantity * i.pricePerUnit, 0);
+    const calculatedAmount = items.reduce((s: number, i: z.infer<typeof itemSchema>) => s + i.quantity * i.pricePerUnit, 0);
+    const totalAmount = calculatedAmount - (labourAmount ?? 0) - (vehicleRent ?? 0);
     const balanceDue = Math.max(0, totalAmount - paidAmount);
     const txnDate = date ? new Date(date) : new Date();
 
@@ -120,6 +121,7 @@ router.post("/", validate(createSchema), async (req, res) => {
           totalAmount,
           paidAmount: paidAmount + advanceUsed,
           balanceDue: finalBalanceDue,
+          advanceUsed,
           notes: notes ?? "",
           arrivalNumber: arrivalNumber ?? null,
           vehicleNumber: vehicleNumber ?? null,
@@ -184,9 +186,12 @@ router.put("/:id", validate(updateSchema), async (req, res) => {
 
     const body = req.body as z.infer<typeof updateSchema>;
     const newItems = body.items;
-    const newTotalAmount = newItems
+    const newCalculatedAmount = newItems
       ? newItems.reduce((s: number, i: z.infer<typeof itemSchema>) => s + i.quantity * i.pricePerUnit, 0)
-      : Number(existing.totalAmount);
+      : Number(existing.totalAmount) + Number(existing.labourAmount ?? 0) + Number(existing.vehicleRent ?? 0);
+    const newLabour = body.labourAmount ?? Number(existing.labourAmount ?? 0);
+    const newVehicleRentAmt = body.vehicleRent ?? Number(existing.vehicleRent ?? 0);
+    const newTotalAmount = newCalculatedAmount - newLabour - newVehicleRentAmt;
     const newPaidAmount = body.paidAmount ?? Number(existing.paidAmount);
     const newBalanceDue = Math.max(0, newTotalAmount - newPaidAmount);
 
@@ -250,12 +255,18 @@ router.delete("/:id", async (req, res) => {
     const txn = await db.transaction.findUnique({ where: { id: req.params.id } });
     if (!txn) { res.status(404).json({ success: false, error: "Transaction not found" }); return; }
 
+    const advanceToRestore = Number(txn.advanceUsed ?? 0);
+
     await db.$transaction([
       db.transactionItem.deleteMany({ where: { transactionId: txn.id } }),
       db.transaction.delete({ where: { id: txn.id } }),
       db.client.update({
         where: { id: txn.clientId },
-        data: { balanceDue: { decrement: Number(txn.balanceDue) }, updatedAt: new Date() },
+        data: {
+          balanceDue: { decrement: Number(txn.balanceDue) },
+          ...(advanceToRestore > 0 ? { advanceBalance: { increment: advanceToRestore } } : {}),
+          updatedAt: new Date(),
+        },
       }),
     ]);
 
