@@ -1,12 +1,12 @@
 // Master database schema — platform-level data only.
 // Connection: MASTER_DATABASE_URL
 // Generates its own Prisma client to: src/backend/generated/master-client
-// Run:  npx prisma generate --schema=prisma/master.prisma
-//       npx prisma migrate dev --schema=prisma/master.prisma --name init
+// Run:  npx prisma generate --schema=prisma/master/schema.prisma
+//       npx prisma migrate dev --schema=prisma/master/schema.prisma --name init
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/master-client"
+  output   = "../../generated/master-client"
 }
 
 datasource db {

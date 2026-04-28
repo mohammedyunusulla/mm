@@ -30,7 +30,7 @@ jobs:
 
       - name: Generate Prisma clients
         working-directory: src/backend
-        run: npx prisma generate --schema=prisma/schema.prisma && npx prisma generate --schema=prisma/master.prisma
+        run: npx prisma generate --schema=prisma/schema.prisma && npx prisma generate --schema=prisma/master/schema.prisma
 
       - name: Build backend
         run: npm run build --workspace=src/backend

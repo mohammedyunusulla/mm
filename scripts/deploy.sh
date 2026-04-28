@@ -21,7 +21,7 @@ npm ci --omit=dev --workspace=src/backend 2>/dev/null || npm install --omit=dev
 # ── 2. Run Prisma migrations ─────────────────────────────────
 echo "Running database migrations..."
 cd "$APP_DIR/backend/src/backend"
-npx prisma migrate deploy --schema=prisma/master.prisma
+npx prisma migrate deploy --schema=prisma/master/schema.prisma
 npx prisma migrate deploy --schema=prisma/schema.prisma
 
 # ── 3. Extract frontend ──────────────────────────────────────
