@@ -161,11 +161,13 @@ router.post("/mandis", validate(createMandiSchema), async (req, res) => {
       return;
     }
 
-    // Create the admin user in the tenant DB
+    // Create the admin user in the tenant DB (upsert in case of retry)
     const tenantDb = getTenantDb(dbUrl);
     const passwordHash = await bcrypt.hash(adminPassword, 12);
-    await tenantDb.user.create({
-      data: { name: adminName, email: adminEmail, passwordHash, role: "ADMIN" },
+    await tenantDb.user.upsert({
+      where: { email: adminEmail },
+      update: { name: adminName, passwordHash, role: "ADMIN" },
+      create: { name: adminName, email: adminEmail, passwordHash, role: "ADMIN" },
     });
 
     // Register the tenant in the master DB
