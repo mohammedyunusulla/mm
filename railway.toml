@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd src/backend && npx prisma generate --schema=prisma/schema.prisma && npx prisma generate --schema=prisma/master/schema.prisma && npm run build"
+buildCommand = "npm install --include=dev && cd src/backend && npx prisma generate --schema=prisma/schema.prisma && npx prisma generate --schema=prisma/master/schema.prisma && npm run build"
 
 [deploy]
 startCommand = "cd src/backend && npx prisma migrate deploy --schema=prisma/master/schema.prisma && node dist/index.js"
