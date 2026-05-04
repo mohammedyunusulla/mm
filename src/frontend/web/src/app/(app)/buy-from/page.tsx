@@ -74,9 +74,11 @@ function NewTransactionModal({
 
   // Auto-apply advance when client or total changes
   useEffect(() => {
-    if (availableAdvance > 0 && totalAmount > 0) {
+    if (totalAmount > 0 && availableAdvance > 0) {
       const applied = Math.min(availableAdvance, totalAmount);
       setPaidAmount(String(applied));
+    } else {
+      setPaidAmount("0");
     }
   }, [clientId, totalAmount]);
 

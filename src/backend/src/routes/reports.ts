@@ -8,17 +8,19 @@ router.use(authenticate);
 router.get("/dashboard", async (req, res) => {
   try {
     const db = req.db!;
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    const { from, to } = req.query as { from?: string; to?: string };
+
+    // Date range: if from/to provided use them, else default to today
+    const rangeStart = from ? new Date(from) : (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
+    const rangeEnd = to ? new Date(to + "T23:59:59.999Z") : (() => { const d = new Date(); d.setHours(23, 59, 59, 999); return d; })();
+    const dateFilter = { gte: rangeStart, lte: rangeEnd };
 
     const [
       totalBuyers,
       totalSellers,
-      todayPurchasesAgg,
-      todaySalesAgg,
-      todayExpensesAgg,
+      purchasesAgg,
+      salesAgg,
+      expensesAgg,
       totalReceivableAgg,
       totalPayableAgg,
       recentTransactions,
@@ -26,20 +28,21 @@ router.get("/dashboard", async (req, res) => {
       db.client.count({ where: { type: "BUYER" } }),
       db.client.count({ where: { type: "SELLER" } }),
       db.transaction.aggregate({
-        where: { type: "PURCHASE", date: { gte: todayStart, lte: todayEnd } },
+        where: { type: "PURCHASE", date: dateFilter },
         _sum: { totalAmount: true },
       }),
       db.transaction.aggregate({
-        where: { type: "SALE", date: { gte: todayStart, lte: todayEnd } },
+        where: { type: "SALE", date: dateFilter },
         _sum: { totalAmount: true },
       }),
       db.expense.aggregate({
-        where: { date: { gte: todayStart, lte: todayEnd } },
+        where: { date: dateFilter },
         _sum: { amount: true },
       }),
       db.client.aggregate({ where: { type: "BUYER" }, _sum: { balanceDue: true } }),
       db.client.aggregate({ where: { type: "SELLER" }, _sum: { balanceDue: true } }),
       db.transaction.findMany({
+        where: { date: dateFilter },
         take: 10,
         orderBy: { createdAt: "desc" },
         include: { client: true, items: true },
@@ -51,9 +54,9 @@ router.get("/dashboard", async (req, res) => {
       data: {
         totalBuyers,
         totalSellers,
-        todayPurchases: Number(todayPurchasesAgg._sum.totalAmount ?? 0),
-        todaySales: Number(todaySalesAgg._sum.totalAmount ?? 0),
-        todayExpenses: Number(todayExpensesAgg._sum.amount ?? 0),
+        todayPurchases: Number(purchasesAgg._sum.totalAmount ?? 0),
+        todaySales: Number(salesAgg._sum.totalAmount ?? 0),
+        todayExpenses: Number(expensesAgg._sum.amount ?? 0),
         totalReceivable: Number(totalReceivableAgg._sum.balanceDue ?? 0),
         totalPayable: Number(totalPayableAgg._sum.balanceDue ?? 0),
         recentTransactions: recentTransactions.map((t: Record<string, unknown>) => ({

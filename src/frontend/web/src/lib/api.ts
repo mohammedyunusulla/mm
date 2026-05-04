@@ -112,8 +112,12 @@ export const api = USE_MOCK
           method: "POST",
           body: JSON.stringify({ amount, note, date }),
         }),
-      getAdvancePayments: (clientId: string) =>
-        fetchApi(`/api/clients/${encodeURIComponent(clientId)}/advance`),
+      getAdvancePayments: (clientId: string, from?: string, to?: string) => {
+        const params = new URLSearchParams();
+        if (from) params.set("from", from);
+        if (to) params.set("to", to);
+        return fetchApi(`/api/clients/${encodeURIComponent(clientId)}/advance?${params}`);
+      },
       updateAdvancePayment: (id: string, data: { amount?: number; note?: string; date?: string }) =>
         fetchApi(`/api/advance/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(data) }),
       deleteAdvancePayment: (id: string) =>
@@ -146,7 +150,12 @@ export const api = USE_MOCK
       deleteExpense: (id: string) =>
         fetchApi(`/api/expenses/${encodeURIComponent(id)}`, { method: "DELETE" }),
       // Reports
-      getDashboard: () => fetchApi("/api/reports/dashboard"),
+      getDashboard: (from?: string, to?: string) => {
+        const params = new URLSearchParams();
+        if (from) params.set("from", from);
+        if (to) params.set("to", to);
+        return fetchApi(`/api/reports/dashboard?${params}`);
+      },
       getSummary: (from?: string, to?: string) => {
         const params = new URLSearchParams();
         if (from) params.set("from", from);

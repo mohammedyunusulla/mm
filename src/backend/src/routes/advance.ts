@@ -31,13 +31,24 @@ type ParamsWithClient = { clientId: string };
 router.get("/", async (req: Request<ParamsWithClient>, res: Response) => {
   try {
     const { clientId } = req.params;
+    const { from, to } = req.query as { from?: string; to?: string };
     const db = req.db!;
 
     const client = await db.client.findUnique({ where: { id: clientId } });
     if (!client) { res.status(404).json({ success: false, error: "Client not found" }); return; }
 
     const payments = await db.advancePayment.findMany({
-      where: { clientId },
+      where: {
+        clientId,
+        ...(from || to
+          ? {
+              date: {
+                ...(from ? { gte: new Date(from) } : {}),
+                ...(to ? { lte: new Date(to + "T23:59:59.999Z") } : {}),
+              },
+            }
+          : {}),
+      },
       orderBy: { date: "desc" },
     });
 

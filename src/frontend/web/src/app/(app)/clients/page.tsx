@@ -8,6 +8,7 @@ import type { Client, ClientType, Transaction, AdvancePayment } from "@mandi/sha
 import Modal from "@/components/Modal";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import EmptyState from "@/components/EmptyState";
+import { useYear } from "@/components/YearProvider";
 import { useDebounce } from "@/hooks/useDebounce";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -318,6 +319,7 @@ function AdvancePaymentModal({
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [saving, setSaving] = useState(false);
   const [invoicePayment, setInvoicePayment] = useState<AdvancePayment | null>(null);
+  const { yearStart, yearEnd } = useYear();
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmt, setEditAmt] = useState("");
@@ -331,14 +333,14 @@ function AdvancePaymentModal({
   const loadHistory = async () => {
     setLoading(true);
     try {
-      const res = await api.getAdvancePayments(client.id);
+      const res = await api.getAdvancePayments(client.id, yearStart, yearEnd);
       if (res.success && res.data) setHistory(res.data as AdvancePayment[]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadHistory(); }, [client.id]);
+  useEffect(() => { loadHistory(); }, [client.id, yearStart, yearEnd]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -13,6 +13,7 @@ import {
 import { api } from "@/lib/api";
 import type { DashboardStats } from "@mandi/shared";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { useYear } from "@/components/YearProvider";
 
 function StatCard({
   title,
@@ -49,10 +50,12 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { yearStart, yearEnd } = useYear();
 
   useEffect(() => {
+    setLoading(true);
     api
-      .getDashboard()
+      .getDashboard(yearStart, yearEnd)
       .then((res) => {
         if (res.success && res.data) {
           setStats(res.data as DashboardStats);
@@ -62,7 +65,7 @@ export default function DashboardPage() {
       })
       .catch(() => setError("Network error loading dashboard."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [yearStart, yearEnd]);
 
   if (loading) return <LoadingSpinner />;
 
