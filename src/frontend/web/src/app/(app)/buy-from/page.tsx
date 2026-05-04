@@ -639,7 +639,7 @@ export default function BuyFromPage() {
     try {
       const [txnRes, clientRes] = await Promise.all([
         api.getTransactions("PURCHASE", undefined, yearStart, yearEnd),
-        api.getClients("BUYER"),
+        api.getClients("BUYER", undefined, yearStart, yearEnd),
       ]);
       if (txnRes.success && txnRes.data) setTransactions(txnRes.data as Transaction[]);
       if (clientRes.success && clientRes.data) setBuyers(clientRes.data as Client[]);

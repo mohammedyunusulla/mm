@@ -282,7 +282,7 @@ export default function SellToPage() {
     try {
       const [txnRes, clientRes] = await Promise.all([
         api.getTransactions("SALE", undefined, yearStart, yearEnd),
-        api.getClients("SELLER"),
+        api.getClients("SELLER", undefined, yearStart, yearEnd),
       ]);
       if (txnRes.success && txnRes.data) setTransactions(txnRes.data as Transaction[]);
       if (clientRes.success && clientRes.data) setSellers(clientRes.data as Client[]);

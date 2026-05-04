@@ -51,7 +51,7 @@ const clientUpdateSchema = clientSchema.partial();
 // ── GET /api/clients ──────────────────────────────────────────────
 router.get("/", async (req, res) => {
   try {
-    const { type, search } = req.query as { type?: string; search?: string };
+    const { type, search, from, to } = req.query as { type?: string; search?: string; from?: string; to?: string };
     const db = req.db!;
 
     const clients = await db.client.findMany({
@@ -68,6 +68,40 @@ router.get("/", async (req, res) => {
       },
       orderBy: { name: "asc" },
     });
+
+    // If year range provided, compute year-scoped advance balance per client
+    if (from || to) {
+      const dateFilter = {
+        ...(from ? { gte: new Date(from) } : {}),
+        ...(to ? { lte: new Date(to + "T23:59:59.999Z") } : {}),
+      };
+
+      const clientIds = clients.map((c: { id: string }) => c.id);
+
+      const [advanceSums, advanceUsedSums] = await Promise.all([
+        db.advancePayment.groupBy({
+          by: ["clientId"],
+          where: { clientId: { in: clientIds }, date: dateFilter },
+          _sum: { amount: true },
+        }),
+        db.transaction.groupBy({
+          by: ["clientId"],
+          where: { clientId: { in: clientIds }, date: dateFilter },
+          _sum: { advanceUsed: true },
+        }),
+      ]);
+
+      const advanceMap = new Map(advanceSums.map((a: any) => [a.clientId, Number(a._sum.amount ?? 0)]));
+      const usedMap = new Map(advanceUsedSums.map((u: any) => [u.clientId, Number(u._sum.advanceUsed ?? 0)]));
+
+      const adjusted = clients.map((c: any) => ({
+        ...c,
+        advanceBalance: Math.max(0, (advanceMap.get(c.id) ?? 0) - (usedMap.get(c.id) ?? 0)),
+      }));
+
+      res.json({ success: true, data: adjusted });
+      return;
+    }
 
     res.json({ success: true, data: clients });
   } catch (err) {

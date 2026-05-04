@@ -81,10 +81,12 @@ export const api = USE_MOCK
         }),
       getMe: () => fetchApi("/api/auth/me"),
       // Clients
-      getClients: (type?: string, search?: string) => {
+      getClients: (type?: string, search?: string, from?: string, to?: string) => {
         const params = new URLSearchParams();
         if (type) params.set("type", type);
         if (search) params.set("search", search);
+        if (from) params.set("from", from);
+        if (to) params.set("to", to);
         return fetchApi(`/api/clients?${params}`);
       },
       getClient: (id: string) => fetchApi(`/api/clients/${encodeURIComponent(id)}`),

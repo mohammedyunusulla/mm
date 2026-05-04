@@ -874,11 +874,12 @@ export default function ClientsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [detailClient, setDetailClient] = useState<Client | null>(null);
+  const { yearStart, yearEnd } = useYear();
 
   const loadClients = async () => {
     setLoading(true);
     try {
-      const res = await api.getClients(activeTab, debouncedSearch || undefined);
+      const res = await api.getClients(activeTab, debouncedSearch || undefined, yearStart, yearEnd);
       if (res.success && res.data) {
         setClients(res.data as Client[]);
       }
@@ -891,7 +892,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     loadClients();
-  }, [activeTab, debouncedSearch]);
+  }, [activeTab, debouncedSearch, yearStart, yearEnd]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this client?")) return;
