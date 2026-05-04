@@ -7,6 +7,7 @@ import type { Expense, ExpenseCategory } from "@mandi/shared";
 import Modal from "@/components/Modal";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import EmptyState from "@/components/EmptyState";
+import { useYear } from "@/components/YearProvider";
 
 const CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: "LABOUR", label: "Labour" },
@@ -33,11 +34,12 @@ export default function ExpensesPage() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [form, setForm] = useState({ category: "LABOUR" as ExpenseCategory, amount: "", description: "" });
   const [saving, setSaving] = useState(false);
+  const { yearStart, yearEnd } = useYear();
 
   const loadExpenses = async () => {
     setLoading(true);
     try {
-      const res = await api.getExpenses(selectedCategory || undefined);
+      const res = await api.getExpenses(selectedCategory || undefined, yearStart, yearEnd);
       if (res.success && res.data) {
         setExpenses(res.data as Expense[]);
       }
@@ -50,7 +52,7 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     loadExpenses();
-  }, [selectedCategory]);
+  }, [selectedCategory, yearStart, yearEnd]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

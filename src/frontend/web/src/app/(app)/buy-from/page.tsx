@@ -7,6 +7,7 @@ import type { Transaction, Client } from "@mandi/shared";
 import Modal from "@/components/Modal";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import EmptyState from "@/components/EmptyState";
+import { useYear } from "@/components/YearProvider";
 
 function NewTransactionModal({
   isOpen,
@@ -629,12 +630,13 @@ export default function BuyFromPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTxn, setEditTxn] = useState<Transaction | null>(null);
+  const { yearStart, yearEnd } = useYear();
 
   const loadData = async () => {
     setLoading(true);
     try {
       const [txnRes, clientRes] = await Promise.all([
-        api.getTransactions("PURCHASE"),
+        api.getTransactions("PURCHASE", undefined, yearStart, yearEnd),
         api.getClients("BUYER"),
       ]);
       if (txnRes.success && txnRes.data) setTransactions(txnRes.data as Transaction[]);
@@ -648,7 +650,7 @@ export default function BuyFromPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [yearStart, yearEnd]);
 
   const totalPurchases = transactions.reduce((s, t) => s + Number(t.totalAmount), 0);
   const totalDue = transactions.reduce((s, t) => s + Number(t.balanceDue), 0);

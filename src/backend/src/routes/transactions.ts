@@ -56,13 +56,21 @@ const createSchema = z.object({
 // ── GET /api/transactions ───────────────────────────────────────────────
 router.get("/", async (req, res) => {
   try {
-    const { type, clientId } = req.query as { type?: string; clientId?: string };
+    const { type, clientId, from, to } = req.query as { type?: string; clientId?: string; from?: string; to?: string };
     const db = req.db!;
 
     const transactions = await db.transaction.findMany({
       where: {
         ...(type ? { type: type as "PURCHASE" | "SALE" } : {}),
         ...(clientId ? { clientId } : {}),
+        ...(from || to
+          ? {
+              date: {
+                ...(from ? { gte: new Date(from) } : {}),
+                ...(to ? { lte: new Date(to + "T23:59:59.999Z") } : {}),
+              },
+            }
+          : {}),
       },
       include: {
         items: true,

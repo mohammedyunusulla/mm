@@ -4,14 +4,37 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { useTheme } from "@/components/ThemeProvider";
-import { AlertTriangle, Lock, LogOut, UserCircle, ChevronDown, Sun, Moon } from "lucide-react";
+import { YearProvider, useYear } from "@/components/YearProvider";
+import { AlertTriangle, Lock, LogOut, UserCircle, ChevronDown, Sun, Moon, Calendar } from "lucide-react";
 
 type SubStatus = "ACTIVE" | "GRACE" | "READONLY" | "BLOCKED";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const [authChecked, setAuthChecked] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+    setAuthChecked(true);
+  }, [router]);
+
+  if (!authChecked) return null;
+
+  return (
+    <YearProvider>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </YearProvider>
+  );
+}
+
+function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
-  const [authChecked, setAuthChecked] = useState(false);
+  const { selectedYear, setSelectedYear } = useYear();
   const [subStatus, setSubStatus] = useState<SubStatus | null>(null);
   const [daysRemaining, setDaysRemaining] = useState(0);
   const [userName, setUserName] = useState("");
@@ -20,12 +43,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
     try {
       const raw = localStorage.getItem("subscription");
       if (raw) {
@@ -40,8 +57,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (name) setUserName(name);
       if (email) setUserEmail(email);
     } catch {}
-    setAuthChecked(true);
-  }, [router]);
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -62,16 +78,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.location.href = "/login";
   };
 
-  if (!authChecked) {
-    return null;
-  }
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i);
 
   return (
     <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 overflow-auto flex flex-col bg-(--color-bg)">
         {/* Top header bar */}
-        <header className="flex items-center justify-end px-6 py-3 border-b border-(--color-border) bg-(--color-header-bg)">
+        <header className="flex items-center justify-between px-6 py-3 border-b border-(--color-border) bg-(--color-header-bg)">
+          {/* Year Selector */}
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-(--color-text-muted)" />
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="px-2 py-1.5 text-sm font-medium border border-(--color-border) rounded-lg bg-(--color-card-bg) text-(--color-text) focus:ring-2 focus:ring-green-500 outline-none cursor-pointer"
+            >
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* User menu */}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen((v) => !v)}

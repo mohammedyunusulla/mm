@@ -119,10 +119,12 @@ export const api = USE_MOCK
       deleteAdvancePayment: (id: string) =>
         fetchApi(`/api/advance/${encodeURIComponent(id)}`, { method: "DELETE" }),
       // Transactions
-      getTransactions: (type?: string, clientId?: string) => {
+      getTransactions: (type?: string, clientId?: string, from?: string, to?: string) => {
         const params = new URLSearchParams();
         if (type) params.set("type", type);
         if (clientId) params.set("clientId", clientId);
+        if (from) params.set("from", from);
+        if (to) params.set("to", to);
         return fetchApi(`/api/transactions?${params}`);
       },
       createTransaction: (data: Record<string, unknown>) =>
@@ -132,9 +134,11 @@ export const api = USE_MOCK
       deleteTransaction: (id: string) =>
         fetchApi(`/api/transactions/${encodeURIComponent(id)}`, { method: "DELETE" }),
       // Expenses
-      getExpenses: (category?: string) => {
+      getExpenses: (category?: string, from?: string, to?: string) => {
         const params = new URLSearchParams();
         if (category) params.set("category", category);
+        if (from) params.set("from", from);
+        if (to) params.set("to", to);
         return fetchApi(`/api/expenses?${params}`);
       },
       createExpense: (data: Record<string, unknown>) =>
