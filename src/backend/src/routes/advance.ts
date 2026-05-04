@@ -91,8 +91,21 @@ advanceUpdateRouter.put("/:id", validate(updateSchema), async (req, res) => {
     const existing = await db.advancePayment.findUnique({ where: { id: req.params.id as string } });
     if (!existing) { res.status(404).json({ success: false, error: "Payment not found" }); return; }
 
+    const client = await db.client.findUnique({ where: { id: existing.clientId } });
+    if (!client) { res.status(404).json({ success: false, error: "Client not found" }); return; }
+
     const newAmount = amount ?? Number(existing.amount);
     const diff = newAmount - Number(existing.amount);
+
+    // If reducing advance, ensure advanceBalance doesn't go negative
+    const currentAdvance = Number(client.advanceBalance);
+    let advanceChange = diff;
+    let balanceDueChange = 0;
+    if (diff < 0 && currentAdvance + diff < 0) {
+      // Can only reduce advance to 0; the rest becomes balance due
+      advanceChange = -currentAdvance;
+      balanceDueChange = -(diff - advanceChange); // positive: increase balance due
+    }
 
     const [payment, updatedClient] = await db.$transaction([
       db.advancePayment.update({
@@ -105,7 +118,11 @@ advanceUpdateRouter.put("/:id", validate(updateSchema), async (req, res) => {
       }),
       db.client.update({
         where: { id: existing.clientId },
-        data: { advanceBalance: { increment: diff }, updatedAt: new Date() },
+        data: {
+          advanceBalance: { increment: advanceChange },
+          ...(balanceDueChange !== 0 ? { balanceDue: { increment: balanceDueChange } } : {}),
+          updatedAt: new Date(),
+        },
       }),
     ]);
 
@@ -124,11 +141,25 @@ advanceUpdateRouter.delete("/:id", async (req, res) => {
     const existing = await db.advancePayment.findUnique({ where: { id: req.params.id } });
     if (!existing) { res.status(404).json({ success: false, error: "Payment not found" }); return; }
 
+    const client = await db.client.findUnique({ where: { id: existing.clientId } });
+    if (!client) { res.status(404).json({ success: false, error: "Client not found" }); return; }
+
+    const currentAdvance = Number(client.advanceBalance);
+    const originalAmount = Number(existing.amount);
+
+    // Only reduce advance by what's currently available; the rest goes to balance due
+    const advanceReduction = Math.min(currentAdvance, originalAmount);
+    const balanceDueIncrease = originalAmount - advanceReduction;
+
     const [, updatedClient] = await db.$transaction([
       db.advancePayment.delete({ where: { id: req.params.id } }),
       db.client.update({
         where: { id: existing.clientId },
-        data: { advanceBalance: { decrement: Number(existing.amount) }, updatedAt: new Date() },
+        data: {
+          advanceBalance: { decrement: advanceReduction },
+          ...(balanceDueIncrease > 0 ? { balanceDue: { increment: balanceDueIncrease } } : {}),
+          updatedAt: new Date(),
+        },
       }),
     ]);
 

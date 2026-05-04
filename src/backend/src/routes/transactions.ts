@@ -103,7 +103,7 @@ router.post("/", validate(createSchema), async (req, res) => {
     if (!client) { res.status(404).json({ success: false, error: "Client not found" }); return; }
 
     const calculatedAmount = items.reduce((s: number, i: z.infer<typeof itemSchema>) => s + i.quantity * i.pricePerUnit, 0);
-    const totalAmount = calculatedAmount - (labourAmount ?? 0) - (vehicleRent ?? 0);
+    const totalAmount = calculatedAmount - (commissionAmount ?? 0) - (labourAmount ?? 0) - (vehicleRent ?? 0);
     const balanceDue = Math.max(0, totalAmount - paidAmount);
     const txnDate = date ? new Date(date) : new Date();
 
@@ -188,10 +188,11 @@ router.put("/:id", validate(updateSchema), async (req, res) => {
     const newItems = body.items;
     const newCalculatedAmount = newItems
       ? newItems.reduce((s: number, i: z.infer<typeof itemSchema>) => s + i.quantity * i.pricePerUnit, 0)
-      : Number(existing.totalAmount) + Number(existing.labourAmount ?? 0) + Number(existing.vehicleRent ?? 0);
+      : Number(existing.totalAmount) + Number(existing.commissionAmount ?? 0) + Number(existing.labourAmount ?? 0) + Number(existing.vehicleRent ?? 0);
+    const newCommission = body.commissionAmount ?? Number(existing.commissionAmount ?? 0);
     const newLabour = body.labourAmount ?? Number(existing.labourAmount ?? 0);
     const newVehicleRentAmt = body.vehicleRent ?? Number(existing.vehicleRent ?? 0);
-    const newTotalAmount = newCalculatedAmount - newLabour - newVehicleRentAmt;
+    const newTotalAmount = newCalculatedAmount - newCommission - newLabour - newVehicleRentAmt;
     const newPaidAmount = body.paidAmount ?? Number(existing.paidAmount);
     const newBalanceDue = Math.max(0, newTotalAmount - newPaidAmount);
 

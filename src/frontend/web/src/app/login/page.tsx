@@ -45,6 +45,9 @@ export default function LoginPage() {
         if (data.data.user?.email) {
           localStorage.setItem("userEmail", data.data.user.email);
         }
+        if (data.data.tenant?.name) {
+          localStorage.setItem("mandiName", data.data.tenant.name);
+        }
         if (data.data.subscription) {
           localStorage.setItem("subscription", JSON.stringify(data.data.subscription));
         }

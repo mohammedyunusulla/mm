@@ -13,11 +13,13 @@ function NewTransactionModal({
   onClose,
   onSaved,
   buyers,
+  transactions,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
   buyers: Client[];
+  transactions: Transaction[];
 }) {
   const [clientId, setClientId] = useState("");
   const [items, setItems] = useState([{ itemName: "", quantity: "", unit: "kg", pricePerUnit: "" }]);
@@ -25,6 +27,15 @@ function NewTransactionModal({
   const [notes, setNotes] = useState("");
   const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
   const [arrivalNumber, setArrivalNumber] = useState("");
+
+  // Auto-fill arrival number based on existing transactions
+  useEffect(() => {
+    const maxArrival = transactions.reduce((max, t) => {
+      const num = parseInt(t.arrivalNumber || "0", 10);
+      return num > max ? num : max;
+    }, 0);
+    setArrivalNumber(String(maxArrival + 1));
+  }, [transactions]);
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [commissionAmount, setCommissionAmount] = useState("");
   const [labourAmount, setLabourAmount] = useState("");
@@ -252,40 +263,102 @@ function NewTransactionModal({
 function printInvoice(txn: Transaction) {
   const w = window.open("", "_blank", "width=800,height=600");
   if (!w) return;
-  const items = txn.items.map((it) =>
-    `<tr><td style="padding:4px 8px;border-bottom:1px solid #eee">${it.itemName}</td>
-     <td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right">${it.quantity} ${it.unit}</td>
-     <td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right">₹${Number(it.pricePerUnit).toLocaleString("en-IN")}</td>
-     <td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right">₹${Number(it.total).toLocaleString("en-IN")}</td></tr>`
+  const mandiName = typeof window !== "undefined" ? localStorage.getItem("mandiName") || "Mandi Manager" : "Mandi Manager";
+  const items = txn.items.map((it, idx) =>
+    `<tr>
+     <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#374151">${idx + 1}</td>
+     <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;color:#374151">${it.itemName}</td>
+     <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#374151">${it.quantity} ${it.unit}</td>
+     <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;color:#374151">₹${Number(it.pricePerUnit).toLocaleString("en-IN")}</td>
+     <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:500;color:#111827">₹${Number(it.total).toLocaleString("en-IN")}</td></tr>`
   ).join("");
 
-  const extras = [
-    txn.commissionAmount && Number(txn.commissionAmount) > 0 ? `<tr><td colspan="3" style="text-align:right;padding:2px 8px">Commission:</td><td style="text-align:right;padding:2px 8px">₹${Number(txn.commissionAmount).toLocaleString("en-IN")}</td></tr>` : "",
-    txn.labourAmount && Number(txn.labourAmount) > 0 ? `<tr><td colspan="3" style="text-align:right;padding:2px 8px">Labour:</td><td style="text-align:right;padding:2px 8px">₹${Number(txn.labourAmount).toLocaleString("en-IN")}</td></tr>` : "",
-    txn.vehicleRent && Number(txn.vehicleRent) > 0 ? `<tr><td colspan="3" style="text-align:right;padding:2px 8px">Vehicle Rent:</td><td style="text-align:right;padding:2px 8px">₹${Number(txn.vehicleRent).toLocaleString("en-IN")}</td></tr>` : "",
+  const deductions = [
+    txn.commissionAmount && Number(txn.commissionAmount) > 0 ? `<tr><td colspan="4" style="text-align:right;padding:6px 12px;color:#6b7280">Commission:</td><td style="text-align:right;padding:6px 12px;color:#dc2626">− ₹${Number(txn.commissionAmount).toLocaleString("en-IN")}</td></tr>` : "",
+    txn.labourAmount && Number(txn.labourAmount) > 0 ? `<tr><td colspan="4" style="text-align:right;padding:6px 12px;color:#6b7280">Labour:</td><td style="text-align:right;padding:6px 12px;color:#dc2626">− ₹${Number(txn.labourAmount).toLocaleString("en-IN")}</td></tr>` : "",
+    txn.vehicleRent && Number(txn.vehicleRent) > 0 ? `<tr><td colspan="4" style="text-align:right;padding:6px 12px;color:#6b7280">Vehicle Rent:</td><td style="text-align:right;padding:6px 12px;color:#dc2626">− ₹${Number(txn.vehicleRent).toLocaleString("en-IN")}</td></tr>` : "",
   ].join("");
 
+  const calcTotal = txn.items.reduce((s, it) => s + Number(it.total), 0);
+
   w.document.write(`<!DOCTYPE html><html><head><title>Invoice ${txn.invoiceNumber || txn.id.slice(0,8)}</title>
-    <style>body{font-family:system-ui,sans-serif;padding:24px;max-width:700px;margin:auto}
-    table{width:100%;border-collapse:collapse}th{text-align:left;padding:6px 8px;border-bottom:2px solid #333}
-    .header{display:flex;justify-content:space-between;align-items:start;margin-bottom:20px}
-    .title{font-size:24px;font-weight:bold}
-    .meta{font-size:13px;color:#555}
-    .footer{margin-top:20px;padding-top:12px;border-top:2px solid #333;display:flex;justify-content:space-between;font-size:14px}
-    @media print{button{display:none}}</style></head><body>
-    <div class="header"><div><div class="title">INVOICE</div>
-    <div class="meta">${txn.invoiceNumber || ""}</div></div>
-    <div style="text-align:right"><div class="meta">Date: ${new Date(txn.date).toLocaleDateString("en-IN")}</div>
-    ${txn.arrivalNumber ? `<div class="meta">Arrival: ${txn.arrivalNumber}</div>` : ""}
-    ${txn.vehicleNumber ? `<div class="meta">Vehicle: ${txn.vehicleNumber}</div>` : ""}</div></div>
-    <div style="margin-bottom:16px"><strong>Client:</strong> ${txn.client?.name || "—"} &nbsp;|&nbsp; ${txn.client?.phone || ""}</div>
-    <table><thead><tr><th>Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead>
-    <tbody>${items}${extras}</tbody></table>
-    <div class="footer"><div>Paid: ₹${Number(txn.paidAmount).toLocaleString("en-IN")}</div>
-    <div><strong>Total: ₹${Number(txn.totalAmount).toLocaleString("en-IN")}</strong></div></div>
-    ${Number(txn.balanceDue) > 0 ? `<div style="text-align:right;color:red;margin-top:4px">Balance Due: ₹${Number(txn.balanceDue).toLocaleString("en-IN")}</div>` : ""}
-    ${txn.notes ? `<div style="margin-top:12px;font-size:12px;color:#777">Notes: ${txn.notes}</div>` : ""}
-    <button onclick="window.print()" style="margin-top:20px;padding:8px 24px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px">Print</button>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; padding: 0; background: #f3f4f6; }
+      .invoice-wrapper { max-width: 720px; margin: 20px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+      .invoice-header { background: linear-gradient(135deg, #065f46 0%, #047857 50%, #059669 100%); color: white; padding: 28px 32px; }
+      .mandi-name { font-size: 26px; font-weight: 700; letter-spacing: 0.5px; }
+      .invoice-label { font-size: 13px; opacity: 0.85; margin-top: 4px; letter-spacing: 1px; text-transform: uppercase; }
+      .invoice-meta { display: flex; justify-content: space-between; align-items: start; padding: 20px 32px; border-bottom: 1px solid #e5e7eb; }
+      .meta-left { }
+      .meta-label { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+      .meta-value { font-size: 14px; color: #111827; font-weight: 500; margin-bottom: 10px; }
+      .meta-right { text-align: right; }
+      .invoice-body { padding: 0 32px 24px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+      th { text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; border-bottom: 2px solid #d1d5db; background: #f9fafb; }
+      th:nth-child(3), th:nth-child(4), th:nth-child(5) { text-align: right; }
+      .subtotal-row td { padding: 10px 12px; border-top: 2px solid #d1d5db; font-weight: 600; color: #111827; }
+      .total-section { margin: 20px 32px; padding: 20px 24px; background: #f0fdf4; border-radius: 10px; border: 1px solid #bbf7d0; }
+      .total-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 14px; color: #374151; }
+      .total-row.grand { font-size: 20px; font-weight: 700; color: #065f46; padding-top: 12px; margin-top: 8px; border-top: 2px solid #86efac; }
+      .total-row.due { color: #dc2626; font-weight: 600; }
+      .notes-section { margin: 0 32px 24px; padding: 12px 16px; background: #fffbeb; border-radius: 8px; border: 1px solid #fde68a; font-size: 13px; color: #92400e; }
+      .footer { text-align: center; padding: 16px 32px 24px; color: #9ca3af; font-size: 12px; }
+      .print-btn { display: block; margin: 0 auto 20px; padding: 10px 32px; background: #059669; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.2s; }
+      .print-btn:hover { background: #047857; }
+      @media print { .print-btn { display: none; } .invoice-wrapper { box-shadow: none; margin: 0; } body { background: #fff; } }
+    </style></head><body>
+    <div class="invoice-wrapper">
+      <div class="invoice-header">
+        <div class="mandi-name">${mandiName}</div>
+        <div class="invoice-label">Purchase Invoice</div>
+      </div>
+
+      <div class="invoice-meta">
+        <div class="meta-left">
+          <div class="meta-label">Bill To</div>
+          <div class="meta-value">${txn.client?.name || "—"}</div>
+          <div class="meta-label">Phone</div>
+          <div class="meta-value">${txn.client?.phone || "—"}</div>
+        </div>
+        <div class="meta-right">
+          <div class="meta-label">Invoice No.</div>
+          <div class="meta-value">${txn.invoiceNumber || "—"}</div>
+          <div class="meta-label">Date</div>
+          <div class="meta-value">${new Date(txn.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
+          ${txn.arrivalNumber ? `<div class="meta-label">Arrival No.</div><div class="meta-value">${txn.arrivalNumber}</div>` : ""}
+          ${txn.vehicleNumber ? `<div class="meta-label">Vehicle No.</div><div class="meta-value">${txn.vehicleNumber}</div>` : ""}
+        </div>
+      </div>
+
+      <div class="invoice-body">
+        <table>
+          <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+          <tbody>
+            ${items}
+            <tr class="subtotal-row"><td colspan="4" style="text-align:right">Subtotal</td><td style="text-align:right">₹${calcTotal.toLocaleString("en-IN")}</td></tr>
+            ${deductions}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="total-section">
+        <div class="total-row"><span>Subtotal</span><span>₹${calcTotal.toLocaleString("en-IN")}</span></div>
+        ${Number(txn.commissionAmount) > 0 ? `<div class="total-row"><span>Commission</span><span>− ₹${Number(txn.commissionAmount).toLocaleString("en-IN")}</span></div>` : ""}
+        ${Number(txn.labourAmount) > 0 ? `<div class="total-row"><span>Labour</span><span>− ₹${Number(txn.labourAmount).toLocaleString("en-IN")}</span></div>` : ""}
+        ${Number(txn.vehicleRent) > 0 ? `<div class="total-row"><span>Vehicle Rent</span><span>− ₹${Number(txn.vehicleRent).toLocaleString("en-IN")}</span></div>` : ""}
+        <div class="total-row grand"><span>Net Total</span><span>₹${Number(txn.totalAmount).toLocaleString("en-IN")}</span></div>
+        <div class="total-row"><span>Paid Amount</span><span>₹${Number(txn.paidAmount).toLocaleString("en-IN")}</span></div>
+        ${Number(txn.advanceUsed) > 0 ? `<div class="total-row"><span>Advance Used</span><span>₹${Number(txn.advanceUsed).toLocaleString("en-IN")}</span></div>` : ""}
+        ${Number(txn.balanceDue) > 0 ? `<div class="total-row due"><span>Balance Due</span><span>₹${Number(txn.balanceDue).toLocaleString("en-IN")}</span></div>` : ""}
+      </div>
+
+      ${txn.notes ? `<div class="notes-section"><strong>Notes:</strong> ${txn.notes}</div>` : ""}
+
+      <div class="footer">Thank you for your business!</div>
+      <button class="print-btn" onclick="window.print()">🖨️ Print Invoice</button>
+    </div>
     </body></html>`);
   w.document.close();
 }
@@ -635,6 +708,7 @@ export default function BuyFromPage() {
         onClose={() => setModalOpen(false)}
         onSaved={loadData}
         buyers={buyers}
+        transactions={transactions}
       />
 
       {editTxn && (

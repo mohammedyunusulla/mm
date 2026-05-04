@@ -894,7 +894,11 @@ export default function ClientsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this client?")) return;
     setDetailClient(null);
-    await api.deleteClient(id);
+    const res = await api.deleteClient(id);
+    if (!res.success) {
+      alert(res.error || "Failed to delete client");
+      return;
+    }
     loadClients();
   };
 

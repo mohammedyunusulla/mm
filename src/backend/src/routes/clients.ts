@@ -116,10 +116,25 @@ router.put("/:id", validate(clientUpdateSchema), async (req, res) => {
 // ── DELETE /api/clients/:id ───────────────────────────────────────────────
 router.delete("/:id", async (req, res) => {
   try {
-    const existing = await req.db!.client.findUnique({ where: { id: req.params.id } });
+    const db = req.db!;
+    const id = req.params.id;
+    const existing = await db.client.findUnique({ where: { id } });
     if (!existing) { res.status(404).json({ success: false, error: "Client not found" }); return; }
 
-    await req.db!.client.delete({ where: { id: req.params.id } });
+    const [txCount, advCount] = await Promise.all([
+      db.transaction.count({ where: { clientId: id } }),
+      db.advancePayment.count({ where: { clientId: id } }),
+    ]);
+
+    if (txCount > 0 || advCount > 0) {
+      res.status(409).json({
+        success: false,
+        error: "Records are present for this client. Please remove all transactions and advance payments before deleting.",
+      });
+      return;
+    }
+
+    await db.client.delete({ where: { id } });
     res.json({ success: true });
   } catch (err) {
     console.error(err);
