@@ -65,13 +65,14 @@ function NewTransactionModal({
 
   const labour = parseFloat(labourAmount) || 0;
   const rent = parseFloat(vehicleRent) || 0;
-  const totalAmount = calculatedAmount - labour - rent;
 
   // Auto-calculate commission: 2% of (Total - Labour - Vehicle Rent)
   const calculatedCommission = (() => {
     const base = calculatedAmount - labour - rent;
     return Math.max(0, Math.round(base * 0.02 * 100) / 100);
   })();
+
+  const totalAmount = calculatedAmount - calculatedCommission - labour - rent;
 
   // Auto-apply advance when client or total changes
   useEffect(() => {
@@ -398,12 +399,13 @@ function EditTransactionModal({
 
   const labour = parseFloat(labourAmount) || 0;
   const rent = parseFloat(vehicleRent) || 0;
-  const totalAmount = calculatedAmount - labour - rent;
 
   const calculatedCommission = (() => {
     const base = calculatedAmount - labour - rent;
     return Math.max(0, Math.round(base * 0.02 * 100) / 100);
   })();
+
+  const totalAmount = calculatedAmount - calculatedCommission - labour - rent;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
