@@ -308,21 +308,21 @@ export default function ReportsPage() {
                     <StatementTable transactions={sales} label="Sales" color="#2563eb" />
                   )}
                   {activeStmt === "BOTH" && (purchases.length > 0 || sales.length > 0) && (
-                    <div className="mt-5 p-5 bg-green-50 rounded-xl border border-green-200">
-                      <h3 className="text-base font-semibold mb-3">Summary</h3>
-                      <div className="flex justify-between py-1.5 text-sm">
-                        <span className="text-gray-600">Total Purchases</span>
-                        <span className="font-semibold text-orange-600">₹{purchases.reduce((s, t) => s + Number(t.totalAmount), 0).toLocaleString("en-IN")}</span>
+                    <div className="mt-5 p-5 bg-white rounded-xl border-2 border-gray-200 shadow-sm">
+                      <h3 className="text-lg font-bold text-gray-900 mb-4">Summary</h3>
+                      <div className="flex justify-between py-2 text-base">
+                        <span className="text-gray-700">Total Purchases</span>
+                        <span className="font-bold text-orange-600">₹{purchases.reduce((s, t) => s + Number(t.totalAmount), 0).toLocaleString("en-IN")}</span>
                       </div>
-                      <div className="flex justify-between py-1.5 text-sm">
-                        <span className="text-gray-600">Total Sales</span>
-                        <span className="font-semibold text-blue-600">₹{sales.reduce((s, t) => s + Number(t.totalAmount), 0).toLocaleString("en-IN")}</span>
+                      <div className="flex justify-between py-2 text-base">
+                        <span className="text-gray-700">Total Sales</span>
+                        <span className="font-bold text-blue-600">₹{sales.reduce((s, t) => s + Number(t.totalAmount), 0).toLocaleString("en-IN")}</span>
                       </div>
                       {(() => {
                         const net = sales.reduce((s, t) => s + Number(t.totalAmount), 0) - purchases.reduce((s, t) => s + Number(t.totalAmount), 0);
                         return (
-                          <div className="flex justify-between pt-3 mt-2 border-t-2 border-green-300 text-lg font-bold">
-                            <span>Net</span>
+                          <div className="flex justify-between pt-4 mt-3 border-t-2 border-gray-300 text-xl font-bold">
+                            <span className="text-gray-900">Net Result</span>
                             <span className={net >= 0 ? "text-green-700" : "text-red-600"}>
                               {net >= 0 ? "+" : ""}₹{net.toLocaleString("en-IN")}
                             </span>
@@ -403,11 +403,11 @@ export default function ReportsPage() {
       const totalS = sales.reduce((s, t) => s + Number(t.totalAmount), 0);
       const net = totalS - totalP;
       summaryHtml = `
-        <div style="margin-top:24px;padding:20px 24px;background:#f0fdf4;border-radius:10px;border:1px solid #d1d5db">
-          <h3 style="font-size:16px;font-weight:600;margin-bottom:12px">Summary</h3>
-          <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span>Total Purchases</span><span style="color:#ea580c;font-weight:600">₹${totalP.toLocaleString("en-IN")}</span></div>
-          <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:14px"><span>Total Sales</span><span style="color:#2563eb;font-weight:600">₹${totalS.toLocaleString("en-IN")}</span></div>
-          <div style="display:flex;justify-content:space-between;padding:12px 0 0;margin-top:8px;border-top:2px solid #d1d5db;font-size:18px;font-weight:700"><span>Net</span><span style="color:${net >= 0 ? "#059669" : "#dc2626"}">${net >= 0 ? "+" : ""}₹${net.toLocaleString("en-IN")}</span></div>
+        <div style="margin-top:24px;padding:24px;background:#ffffff;border-radius:10px;border:2px solid #d1d5db">
+          <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;color:#111827">Summary</h3>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:15px"><span style="color:#374151">Total Purchases</span><span style="color:#ea580c;font-weight:700">₹${totalP.toLocaleString("en-IN")}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:15px"><span style="color:#374151">Total Sales</span><span style="color:#2563eb;font-weight:700">₹${totalS.toLocaleString("en-IN")}</span></div>
+          <div style="display:flex;justify-content:space-between;padding:14px 0 0;margin-top:10px;border-top:2px solid #9ca3af;font-size:20px;font-weight:700"><span style="color:#111827">Net Result</span><span style="color:${net >= 0 ? "#059669" : "#dc2626"}">${net >= 0 ? "+" : ""}₹${net.toLocaleString("en-IN")}</span></div>
         </div>`;
     }
 
