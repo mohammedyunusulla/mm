@@ -214,10 +214,16 @@ function NewTransactionModal({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-0.5">Total</label>
-            <div className="px-2.5 py-1.5 bg-gray-50 border rounded-lg text-sm font-semibold">
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Calculated</label>
+            <div className="px-2.5 py-1.5 bg-gray-50 border rounded-lg text-sm text-gray-600">
+              ₹{calculatedAmount.toLocaleString("en-IN")}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Net Total</label>
+            <div className="px-2.5 py-1.5 bg-green-50 border border-green-200 rounded-lg text-sm font-semibold text-green-700">
               ₹{totalAmount.toLocaleString("en-IN")}
             </div>
           </div>
@@ -490,10 +496,14 @@ function EditTransactionModal({
             ))}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-0.5">Total</label>
-            <div className="px-2.5 py-1.5 bg-gray-50 border rounded-lg text-sm font-semibold">₹{totalAmount.toLocaleString("en-IN")}</div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Calculated</label>
+            <div className="px-2.5 py-1.5 bg-gray-50 border rounded-lg text-sm text-gray-600">₹{calculatedAmount.toLocaleString("en-IN")}</div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-0.5">Net Total</label>
+            <div className="px-2.5 py-1.5 bg-green-50 border border-green-200 rounded-lg text-sm font-semibold text-green-700">₹{totalAmount.toLocaleString("en-IN")}</div>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-0.5">Paid Amount</label>

@@ -26,7 +26,6 @@ function NewSaleModal({
   const [notes, setNotes] = useState("");
   const [txDate, setTxDate] = useState(new Date().toISOString().slice(0, 10));
   const [vehicleNumber, setVehicleNumber] = useState("");
-  const [commissionAmount, setCommissionAmount] = useState("");
   const [labourAmount, setLabourAmount] = useState("");
   const [vehicleRent, setVehicleRent] = useState("");
   const [saving, setSaving] = useState(false);
@@ -55,10 +54,7 @@ function NewSaleModal({
   const labour = parseFloat(labourAmount) || 0;
   const rent = parseFloat(vehicleRent) || 0;
 
-  // Auto-calculate commission: 2% of calculated amount
-  const calculatedCommission = Math.max(0, Math.round(calculatedAmount * 0.02 * 100) / 100);
-
-  const totalAmount = calculatedAmount - calculatedCommission - labour - rent;
+  const totalAmount = calculatedAmount - labour - rent;
 
   // Auto-apply advance when client or total changes
   useEffect(() => {
@@ -87,7 +83,6 @@ function NewSaleModal({
         notes,
         date: txDate,
         vehicleNumber: vehicleNumber || undefined,
-        commissionAmount: calculatedCommission > 0 ? calculatedCommission : undefined,
         labourAmount: labourAmount ? parseFloat(labourAmount) : undefined,
         vehicleRent: vehicleRent ? parseFloat(vehicleRent) : undefined,
       });
@@ -133,11 +128,6 @@ function NewSaleModal({
             <label className="block text-xs font-medium text-gray-700 mb-0.5">Vehicle No.</label>
             <input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)}
               className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" placeholder="MH-12-AB-1234" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-0.5">Commission (2%)</label>
-            <input type="number" value={calculatedCommission || ""} readOnly
-              className="w-full px-2.5 py-1.5 text-sm border rounded-lg bg-gray-50 text-gray-600 outline-none" placeholder="Auto" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-0.5">Labour</label>
@@ -256,7 +246,6 @@ function printInvoice(txn: Transaction) {
   ).join("");
 
   const deductions = [
-    txn.commissionAmount && Number(txn.commissionAmount) > 0 ? `<tr><td colspan="4" style="text-align:right;padding:6px 12px;color:#6b7280">Commission:</td><td style="text-align:right;padding:6px 12px;color:#dc2626">− ₹${Number(txn.commissionAmount).toLocaleString("en-IN")}</td></tr>` : "",
     txn.labourAmount && Number(txn.labourAmount) > 0 ? `<tr><td colspan="4" style="text-align:right;padding:6px 12px;color:#6b7280">Labour:</td><td style="text-align:right;padding:6px 12px;color:#dc2626">− ₹${Number(txn.labourAmount).toLocaleString("en-IN")}</td></tr>` : "",
     txn.vehicleRent && Number(txn.vehicleRent) > 0 ? `<tr><td colspan="4" style="text-align:right;padding:6px 12px;color:#6b7280">Vehicle Rent:</td><td style="text-align:right;padding:6px 12px;color:#dc2626">− ₹${Number(txn.vehicleRent).toLocaleString("en-IN")}</td></tr>` : "",
   ].join("");
@@ -326,7 +315,6 @@ function printInvoice(txn: Transaction) {
 
       <div class="total-section">
         <div class="total-row"><span>Subtotal</span><span>₹${calcTotal.toLocaleString("en-IN")}</span></div>
-        ${Number(txn.commissionAmount) > 0 ? `<div class="total-row"><span>Commission</span><span>− ₹${Number(txn.commissionAmount).toLocaleString("en-IN")}</span></div>` : ""}
         ${Number(txn.labourAmount) > 0 ? `<div class="total-row"><span>Labour</span><span>− ₹${Number(txn.labourAmount).toLocaleString("en-IN")}</span></div>` : ""}
         ${Number(txn.vehicleRent) > 0 ? `<div class="total-row"><span>Vehicle Rent</span><span>− ₹${Number(txn.vehicleRent).toLocaleString("en-IN")}</span></div>` : ""}
         <div class="total-row grand"><span>Net Total</span><span>₹${Number(txn.totalAmount).toLocaleString("en-IN")}</span></div>
@@ -379,9 +367,7 @@ function EditSaleModal({
   const labour = parseFloat(labourAmount) || 0;
   const rent = parseFloat(vehicleRent) || 0;
 
-  const calculatedCommission = Math.max(0, Math.round(calculatedAmount * 0.02 * 100) / 100);
-
-  const totalAmount = calculatedAmount - calculatedCommission - labour - rent;
+  const totalAmount = calculatedAmount - labour - rent;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -394,7 +380,6 @@ function EditSaleModal({
         paidAmount: parseFloat(paidAmount) || 0,
         notes, date: txDate,
         vehicleNumber: vehicleNumber || undefined,
-        commissionAmount: calculatedCommission > 0 ? calculatedCommission : undefined,
         labourAmount: labourAmount ? parseFloat(labourAmount) : undefined,
         vehicleRent: vehicleRent ? parseFloat(vehicleRent) : undefined,
       });
@@ -419,11 +404,6 @@ function EditSaleModal({
             <label className="block text-xs font-medium text-gray-700 mb-0.5">Vehicle No.</label>
             <input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value)}
               className="w-full px-2.5 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-green-500 outline-none" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-0.5">Commission (2%)</label>
-            <input type="number" value={calculatedCommission || ""} readOnly
-              className="w-full px-2.5 py-1.5 text-sm border rounded-lg bg-gray-50 text-gray-600 outline-none" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-0.5">Labour</label>
@@ -551,9 +531,8 @@ function TransactionRow({ txn, onEdit, onDelete }: { txn: Transaction; onEdit: (
             </tbody>
           </table>
           {/* Extras */}
-          {(Number(txn.commissionAmount) > 0 || Number(txn.labourAmount) > 0 || Number(txn.vehicleRent) > 0) && (
+          {(Number(txn.labourAmount) > 0 || Number(txn.vehicleRent) > 0) && (
             <div className="flex gap-4 mt-2 text-xs text-gray-500 border-t border-gray-100 pt-2">
-              {Number(txn.commissionAmount) > 0 && <span>Commission: ₹{Number(txn.commissionAmount).toLocaleString("en-IN")}</span>}
               {Number(txn.labourAmount) > 0 && <span>Labour: ₹{Number(txn.labourAmount).toLocaleString("en-IN")}</span>}
               {Number(txn.vehicleRent) > 0 && <span>V.Rent: ₹{Number(txn.vehicleRent).toLocaleString("en-IN")}</span>}
             </div>

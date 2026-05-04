@@ -32,7 +32,7 @@ export default function ExpensesPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [form, setForm] = useState({ category: "LABOUR" as ExpenseCategory, amount: "", description: "" });
+  const [form, setForm] = useState({ category: "LABOUR" as ExpenseCategory, amount: "", description: "", date: new Date().toISOString().slice(0, 10) });
   const [saving, setSaving] = useState(false);
   const { yearStart, yearEnd } = useYear();
 
@@ -62,9 +62,10 @@ export default function ExpensesPage() {
         category: form.category,
         amount: parseFloat(form.amount),
         description: form.description,
+        date: form.date,
       });
       setModalOpen(false);
-      setForm({ category: "LABOUR", amount: "", description: "" });
+      setForm({ category: "LABOUR", amount: "", description: "", date: new Date().toISOString().slice(0, 10) });
       loadExpenses();
     } catch {
       // silently handle
@@ -217,6 +218,15 @@ export default function ExpensesPage() {
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
               required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <input
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
             />
           </div>
           <div className="flex gap-3 pt-2">
