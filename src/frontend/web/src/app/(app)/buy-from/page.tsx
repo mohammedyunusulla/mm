@@ -66,11 +66,8 @@ function NewTransactionModal({
   const labour = parseFloat(labourAmount) || 0;
   const rent = parseFloat(vehicleRent) || 0;
 
-  // Auto-calculate commission: 2% of (Total - Labour - Vehicle Rent)
-  const calculatedCommission = (() => {
-    const base = calculatedAmount - labour - rent;
-    return Math.max(0, Math.round(base * 0.02 * 100) / 100);
-  })();
+  // Auto-calculate commission: 2% of calculated amount
+  const calculatedCommission = Math.max(0, Math.round(calculatedAmount * 0.02 * 100) / 100);
 
   const totalAmount = calculatedAmount - calculatedCommission - labour - rent;
 
@@ -400,10 +397,7 @@ function EditTransactionModal({
   const labour = parseFloat(labourAmount) || 0;
   const rent = parseFloat(vehicleRent) || 0;
 
-  const calculatedCommission = (() => {
-    const base = calculatedAmount - labour - rent;
-    return Math.max(0, Math.round(base * 0.02 * 100) / 100);
-  })();
+  const calculatedCommission = Math.max(0, Math.round(calculatedAmount * 0.02 * 100) / 100);
 
   const totalAmount = calculatedAmount - calculatedCommission - labour - rent;
 
