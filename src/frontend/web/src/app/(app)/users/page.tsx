@@ -11,6 +11,7 @@ import {
   Shield,
   User,
   KeyRound,
+  Pencil,
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -57,6 +58,12 @@ export default function UsersPage() {
   const [resetPassword, setResetPassword] = useState("");
   const [resetting, setResetting] = useState(false);
   const [resetMsg, setResetMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Edit user modal
+  const [editTarget, setEditTarget] = useState<StaffUser | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", role: "MANAGER" as "ADMIN" | "MANAGER" });
+  const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -157,6 +164,41 @@ export default function UsersPage() {
     }
   };
 
+  const openEdit = (user: StaffUser) => {
+    setEditTarget(user);
+    setEditForm({ name: user.name, email: user.email || "", phone: user.phone || "", role: user.role });
+    setEditError("");
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    setEditing(true);
+    setEditError("");
+    try {
+      const body: Record<string, string> = { name: editForm.name, role: editForm.role };
+      if (editForm.email) body.email = editForm.email;
+      if (editForm.phone) body.phone = editForm.phone;
+
+      const res = await fetch(`${API_URL}/api/auth/users/${editTarget.id}`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditTarget(null);
+        fetchUsers();
+      } else {
+        setEditError(data.error || "Failed to update user");
+      }
+    } catch {
+      setEditError("Network error");
+    } finally {
+      setEditing(false);
+    }
+  };
+
   return (
     <div>
       {/* Header */}
@@ -244,6 +286,13 @@ export default function UsersPage() {
                   <td className="px-5 py-4">
                     <div className="flex items-center justify-end gap-1">
                       <button
+                        onClick={() => openEdit(user)}
+                        title="Edit User"
+                        className="p-1.5 text-gray-400 hover:text-green-600 transition"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => { setResetTarget(user); setResetPassword(""); setResetMsg(null); }}
                         title="Reset Password"
                         className="p-1.5 text-gray-400 hover:text-indigo-600 transition"
@@ -325,6 +374,60 @@ export default function UsersPage() {
                 <button type="submit" disabled={creating}
                   className="flex-1 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition text-sm font-medium">
                   {creating ? "Creating…" : "Create User"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editTarget && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl border border-gray-200 w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-900 text-lg">Edit User</h3>
+              <button onClick={() => setEditTarget(null)} className="text-gray-400 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleEdit} className="px-6 py-5 space-y-4">
+              {editError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">{editError}</div>
+              )}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Full Name</label>
+                <input required value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                  minLength={2} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                  <input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg outline-none focus:ring-2 focus:ring-green-500 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Phone</label>
+                  <input type="tel" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                    minLength={10} maxLength={15} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Role</label>
+                <select value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value as "ADMIN" | "MANAGER" })}
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg outline-none focus:ring-2 focus:ring-green-500 text-sm">
+                  <option value="MANAGER">Manager</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setEditTarget(null)}
+                  className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition text-sm">Cancel</button>
+                <button type="submit" disabled={editing}
+                  className="flex-1 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition text-sm font-medium">
+                  {editing ? "Saving…" : "Save Changes"}
                 </button>
               </div>
             </form>

@@ -158,26 +158,53 @@ router.get("/users", authenticate, requireAdmin, async (req, res) => {
   }
 });
 
-// ── Deactivate / reactivate a user (admin only) ──────────────────
+// ── Update a user (admin only) ───────────────────────────────────
 // PATCH /api/auth/users/:id
-router.patch("/users/:id", authenticate, requireAdmin, async (req, res) => {
-  try {
-    const { isActive } = req.body as { isActive?: boolean };
-    if (typeof isActive !== "boolean") {
-      res.status(400).json({ success: false, error: "isActive boolean required" });
-      return;
-    }
+const updateUserSchema = z.object({
+  isActive: z.boolean().optional(),
+  name: z.string().min(2).max(100).optional(),
+  email: z.string().email().optional(),
+  phone: z.string().min(10).max(15).optional(),
+  role: z.enum(["ADMIN", "MANAGER"]).optional(),
+}).refine(data => Object.keys(data).length > 0, { message: "At least one field required" });
 
-    if (req.params.id === req.user!.userId && !isActive) {
+router.patch("/users/:id", authenticate, requireAdmin, validate(updateUserSchema), async (req, res) => {
+  try {
+    const body = req.body as z.infer<typeof updateUserSchema>;
+    const id = req.params.id as string;
+
+    if (id === req.user!.userId && body.isActive === false) {
       res.status(400).json({ success: false, error: "Cannot deactivate your own account" });
       return;
     }
 
-    const user = await req.db!.user.findUnique({ where: { id: req.params.id as string } });
+    const user = await req.db!.user.findUnique({ where: { id } });
     if (!user) { res.status(404).json({ success: false, error: "User not found" }); return; }
 
-    await req.db!.user.update({ where: { id: req.params.id as string }, data: { isActive } });
-    res.json({ success: true });
+    // Check email uniqueness if changing
+    if (body.email && body.email !== user.email) {
+      const exists = await req.db!.user.findUnique({ where: { email: body.email } });
+      if (exists) { res.status(409).json({ success: false, error: "Email already in use" }); return; }
+    }
+    // Check phone uniqueness if changing
+    if (body.phone && body.phone !== user.phone) {
+      const exists = await req.db!.user.findUnique({ where: { phone: body.phone } });
+      if (exists) { res.status(409).json({ success: false, error: "Phone already in use" }); return; }
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (body.isActive !== undefined) updateData.isActive = body.isActive;
+    if (body.name) updateData.name = body.name;
+    if (body.email !== undefined) updateData.email = body.email;
+    if (body.phone !== undefined) updateData.phone = body.phone;
+    if (body.role) updateData.role = body.role;
+
+    const updated = await req.db!.user.update({
+      where: { id },
+      data: updateData,
+      select: { id: true, name: true, email: true, phone: true, role: true, isActive: true },
+    });
+    res.json({ success: true, data: updated });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: "Server error" });
