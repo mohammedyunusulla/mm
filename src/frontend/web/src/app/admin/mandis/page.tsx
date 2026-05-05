@@ -395,7 +395,7 @@ export default function MandisPage() {
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => { setCreditsTarget(mandi); setCreditDays(30); setCreditsMsg(""); }} title="Add Credits" className="p-1.5 text-slate-400 hover:text-emerald-400 transition">
                         <CreditCard className="w-4 h-4" />
                       </button>
