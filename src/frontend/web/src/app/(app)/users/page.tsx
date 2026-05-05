@@ -12,6 +12,7 @@ import {
   User,
   KeyRound,
   Pencil,
+  Trash2,
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -199,6 +200,24 @@ export default function UsersPage() {
     }
   };
 
+  const handleDeleteUser = async (user: StaffUser) => {
+    if (!confirm(`Delete user "${user.name}"? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`${API_URL}/api/auth/users/${user.id}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchUsers();
+      } else {
+        setError(data.error || "Failed to delete user");
+      }
+    } catch {
+      setError("Network error");
+    }
+  };
+
   return (
     <div>
       {/* Header */}
@@ -307,6 +326,13 @@ export default function UsersPage() {
                         {user.isActive
                           ? <ToggleRight className="w-5 h-5 text-emerald-400" />
                           : <ToggleLeft className="w-5 h-5" />}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(user)}
+                        title="Delete User"
+                        className="p-1.5 text-gray-400 hover:text-red-600 transition"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>

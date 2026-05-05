@@ -213,6 +213,24 @@ router.patch("/users/:id", authenticate, requireAdmin, validate(updateUserSchema
 
 // ── Change own password ───────────────────────────────────────────
 // PATCH /api/auth/password
+// ── Delete a user (admin only) ───────────────────────────────────
+router.delete("/users/:id", authenticate, requireAdmin, async (req, res) => {
+  try {
+    const id = req.params.id as string;
+    if (id === req.user!.userId) {
+      res.status(400).json({ success: false, error: "Cannot delete your own account" });
+      return;
+    }
+    const user = await req.db!.user.findUnique({ where: { id } });
+    if (!user) { res.status(404).json({ success: false, error: "User not found" }); return; }
+
+    await req.db!.user.delete({ where: { id } });
+    res.json({ success: true, message: "User deleted" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(8, "New password must be at least 8 characters"),
