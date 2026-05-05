@@ -212,4 +212,25 @@ router.patch("/password", authenticate, validate(changePasswordSchema), async (r
   }
 });
 
+// ── Admin reset another user's password ───────────────────────────
+// PATCH /api/auth/users/:id/password
+const adminResetPasswordSchema = z.object({
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+router.patch("/users/:id/password", authenticate, requireAdmin, validate(adminResetPasswordSchema), async (req, res) => {
+  try {
+    const { newPassword } = req.body as z.infer<typeof adminResetPasswordSchema>;
+    const targetUser = await req.db!.user.findUnique({ where: { id: req.params.id as string } });
+    if (!targetUser) { res.status(404).json({ success: false, error: "User not found" }); return; }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await req.db!.user.update({ where: { id: targetUser.id }, data: { passwordHash } });
+    res.json({ success: true, message: "Password reset successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
 export default router;

@@ -10,6 +10,7 @@ import {
   ToggleRight,
   Shield,
   User,
+  KeyRound,
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -50,6 +51,12 @@ export default function UsersPage() {
   const [form, setForm] = useState<CreateForm>(EMPTY_FORM);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
+
+  // Reset password modal
+  const [resetTarget, setResetTarget] = useState<StaffUser | null>(null);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetting, setResetting] = useState(false);
+  const [resetMsg, setResetMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -122,6 +129,31 @@ export default function UsersPage() {
       }
     } catch {
       setError("Failed to update user");
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetTarget) return;
+    setResetting(true);
+    setResetMsg(null);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/users/${resetTarget.id}/password`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({ newPassword: resetPassword }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setResetMsg({ type: "success", text: "Password reset successfully" });
+        setResetPassword("");
+      } else {
+        setResetMsg({ type: "error", text: data.error || "Failed to reset password" });
+      }
+    } catch {
+      setResetMsg({ type: "error", text: "Network error" });
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -210,7 +242,14 @@ export default function UsersPage() {
                     </span>
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex items-center justify-end">
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => { setResetTarget(user); setResetPassword(""); setResetMsg(null); }}
+                        title="Reset Password"
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 transition"
+                      >
+                        <KeyRound className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => handleToggle(user)}
                         title={user.isActive ? "Disable" : "Enable"}
@@ -286,6 +325,51 @@ export default function UsersPage() {
                 <button type="submit" disabled={creating}
                   className="flex-1 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition text-sm font-medium">
                   {creating ? "Creating…" : "Create User"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Password Modal */}
+      {resetTarget && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl border border-gray-200 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-900 text-lg">Reset Password</h3>
+              <button onClick={() => setResetTarget(null)} className="text-gray-400 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleResetPassword} className="px-6 py-5 space-y-4">
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
+                Resetting password for: <strong className="text-gray-900">{resetTarget.name}</strong>
+                <span className="text-gray-400 ml-2">({resetTarget.email || resetTarget.phone})</span>
+              </div>
+              {resetMsg && (
+                <div className={`p-3 rounded-lg text-sm ${resetMsg.type === "success" ? "bg-green-50 border border-green-200 text-green-700" : "bg-red-50 border border-red-200 text-red-600"}`}>
+                  {resetMsg.text}
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">New Password</label>
+                <input
+                  required
+                  type="password"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-300 text-gray-900 rounded-lg outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                  placeholder="Min 8 characters"
+                  minLength={8}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setResetTarget(null)}
+                  className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition text-sm">Cancel</button>
+                <button type="submit" disabled={resetting}
+                  className="flex-1 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition text-sm font-medium">
+                  {resetting ? "Resetting…" : "Reset Password"}
                 </button>
               </div>
             </form>
