@@ -384,10 +384,25 @@ router.get("/mandis/:id", async (req, res) => {
 
     // Return stats from the tenant's own DB
     const tenantDb = getTenantDb(tenant.dbUrl);
-    const [userCount, clientCount] = await Promise.all([
-      tenantDb.user.count(),
-      tenantDb.client.count(),
+    const [
+      users,
+      buyerCount,
+      sellerCount,
+      transactionCount,
+      expenseCount,
+    ] = await Promise.all([
+      tenantDb.user.findMany({
+        select: { id: true, name: true, email: true, phone: true, role: true, isActive: true, lastLoginAt: true, createdAt: true },
+        orderBy: { createdAt: "asc" },
+      }),
+      tenantDb.client.count({ where: { type: "BUYER" } }),
+      tenantDb.client.count({ where: { type: "SELLER" } }),
+      tenantDb.transaction.count(),
+      tenantDb.expense.count(),
     ]);
+
+    const adminCount = users.filter((u: any) => u.role === "ADMIN").length;
+    const managerCount = users.filter((u: any) => u.role === "MANAGER").length;
 
     res.json({
       success: true,
@@ -399,7 +414,15 @@ router.get("/mandis/:id", async (req, res) => {
         subscriptionStatus: computeSubscriptionStatus(tenant.subscriptionEndDate).status,
         daysRemaining: computeSubscriptionStatus(tenant.subscriptionEndDate).daysRemaining,
         createdAt: tenant.createdAt, updatedAt: tenant.updatedAt,
-        stats: { users: userCount, clients: clientCount },
+        stats: {
+          admins: adminCount,
+          managers: managerCount,
+          buyers: buyerCount,
+          sellers: sellerCount,
+          transactions: transactionCount,
+          expenses: expenseCount,
+        },
+        users,
       },
     });
   } catch (err) {

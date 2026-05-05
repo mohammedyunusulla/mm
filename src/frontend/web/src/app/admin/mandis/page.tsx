@@ -98,6 +98,21 @@ export default function MandisPage() {
   const [deleteTarget, setDeleteTarget] = useState<Mandi | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Detail view
+  const [detailMandi, setDetailMandi] = useState<any | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const loadMandiDetail = async (id: string) => {
+    setDetailLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/super/mandis/${id}`, { headers: authHeaders() });
+      const data = await res.json();
+      if (data.success) setDetailMandi(data.data);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   const fetchMandis = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -357,9 +372,9 @@ export default function MandisPage() {
             </thead>
             <tbody className="divide-y divide-slate-700">
               {filtered.map((mandi) => (
-                <tr key={mandi.id} className="hover:bg-slate-700/30 transition">
+                <tr key={mandi.id} className="hover:bg-slate-700/30 transition cursor-pointer" onClick={() => loadMandiDetail(mandi.id)}>
                   <td className="px-5 py-4">
-                    <div className="font-medium text-white">{mandi.name}</div>
+                    <div className="font-medium text-white hover:text-indigo-400 transition">{mandi.name}</div>
                     <div className="text-slate-400 text-xs font-mono mt-0.5">{mandi.slug}</div>
                   </td>
                   <td className="px-5 py-4 text-slate-300">{mandi.phone}</td>
@@ -651,6 +666,132 @@ export default function MandisPage() {
                 {deleting ? "Deleting…" : "Delete Mandi"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mandi Detail Modal */}
+      {detailMandi && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700 sticky top-0 bg-slate-800 z-10">
+              <div>
+                <h3 className="font-semibold text-white text-lg">{detailMandi.name}</h3>
+                <p className="text-slate-400 text-xs font-mono">{detailMandi.slug}</p>
+              </div>
+              <button onClick={() => setDetailMandi(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {detailLoading ? (
+              <div className="py-16 text-center text-slate-400">Loading…</div>
+            ) : (
+              <div className="px-6 py-5 space-y-6">
+                {/* Overview Stats */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-slate-700/50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-white">{detailMandi.stats?.admins ?? 0}</p>
+                    <p className="text-xs text-slate-400 mt-1">Admins</p>
+                  </div>
+                  <div className="bg-slate-700/50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-white">{detailMandi.stats?.managers ?? 0}</p>
+                    <p className="text-xs text-slate-400 mt-1">Managers</p>
+                  </div>
+                  <div className="bg-slate-700/50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-white">{(detailMandi.stats?.admins ?? 0) + (detailMandi.stats?.managers ?? 0)}</p>
+                    <p className="text-xs text-slate-400 mt-1">Total Users</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-orange-900/30 border border-orange-800/50 rounded-xl p-4">
+                    <p className="text-2xl font-bold text-orange-400">{detailMandi.stats?.buyers ?? 0}</p>
+                    <p className="text-xs text-slate-400 mt-1">Buy Clients (Buyers)</p>
+                  </div>
+                  <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-4">
+                    <p className="text-2xl font-bold text-blue-400">{detailMandi.stats?.sellers ?? 0}</p>
+                    <p className="text-xs text-slate-400 mt-1">Sell Clients (Sellers)</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-700/50 rounded-xl p-4">
+                    <p className="text-2xl font-bold text-white">{detailMandi.stats?.transactions ?? 0}</p>
+                    <p className="text-xs text-slate-400 mt-1">Total Transactions</p>
+                  </div>
+                  <div className="bg-slate-700/50 rounded-xl p-4">
+                    <p className="text-2xl font-bold text-white">{detailMandi.stats?.expenses ?? 0}</p>
+                    <p className="text-xs text-slate-400 mt-1">Total Expenses</p>
+                  </div>
+                </div>
+
+                {/* Mandi Info */}
+                <div className="bg-slate-700/30 rounded-xl p-4 space-y-2">
+                  <h4 className="text-sm font-medium text-slate-300 mb-3 uppercase tracking-wide">Mandi Info</h4>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Phone</span>
+                    <span className="text-white">{detailMandi.phone}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Admin Email</span>
+                    <span className="text-white">{detailMandi.adminEmail}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Plan</span>
+                    <span className="text-white">{detailMandi.plan}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Status</span>
+                    <span className={detailMandi.isActive ? "text-emerald-400" : "text-red-400"}>{detailMandi.isActive ? "Active" : "Disabled"}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Subscription</span>
+                    <span className="text-white">{detailMandi.subscriptionStatus} ({detailMandi.daysRemaining}d remaining)</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Created</span>
+                    <span className="text-white">{new Date(detailMandi.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                  </div>
+                </div>
+
+                {/* Users Table */}
+                {detailMandi.users && detailMandi.users.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-300 mb-3 uppercase tracking-wide">Users & Last Login</h4>
+                    <div className="bg-slate-700/30 rounded-xl overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-slate-600">
+                            <th className="text-left px-4 py-2.5 text-slate-400 font-medium">Name</th>
+                            <th className="text-left px-4 py-2.5 text-slate-400 font-medium">Email / Phone</th>
+                            <th className="text-left px-4 py-2.5 text-slate-400 font-medium">Role</th>
+                            <th className="text-left px-4 py-2.5 text-slate-400 font-medium">Last Login</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700">
+                          {detailMandi.users.map((u: any) => (
+                            <tr key={u.id}>
+                              <td className="px-4 py-2.5 text-white">{u.name}</td>
+                              <td className="px-4 py-2.5 text-slate-300 text-xs">{u.email || u.phone || "—"}</td>
+                              <td className="px-4 py-2.5">
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${u.role === "ADMIN" ? "bg-indigo-900/60 text-indigo-300" : "bg-slate-600 text-slate-300"}`}>
+                                  {u.role}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2.5 text-slate-400 text-xs">
+                                {u.lastLoginAt
+                                  ? new Date(u.lastLoginAt).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                                  : "Never"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
