@@ -61,8 +61,10 @@ router.post("/login", validate(loginSchema), async (req, res) => {
 
     const token = signToken({ userId: user.id, tenantId: tenant.id, role: user.role });
 
-    // Record last login time
-    await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    // Record last login time (ignore if column not yet migrated)
+    try {
+      await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    } catch { /* lastLoginAt column may not exist yet */ }
 
     res.json({
       success: true,

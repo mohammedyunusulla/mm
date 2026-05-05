@@ -384,6 +384,12 @@ router.get("/mandis/:id", async (req, res) => {
 
     // Return stats from the tenant's own DB
     const tenantDb = getTenantDb(tenant.dbUrl);
+
+    // Try to add lastLoginAt column if missing (schema may not be migrated yet)
+    try {
+      await tenantDb.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lastLoginAt" TIMESTAMP`);
+    } catch { /* column might already exist or DB doesn't support IF NOT EXISTS */ }
+
     const [
       users,
       buyerCount,
@@ -394,7 +400,13 @@ router.get("/mandis/:id", async (req, res) => {
       tenantDb.user.findMany({
         select: { id: true, name: true, email: true, phone: true, role: true, isActive: true, lastLoginAt: true, createdAt: true },
         orderBy: { createdAt: "asc" },
-      }),
+      }).catch(() =>
+        // Fallback if lastLoginAt column still doesn't exist
+        tenantDb.user.findMany({
+          select: { id: true, name: true, email: true, phone: true, role: true, isActive: true, createdAt: true },
+          orderBy: { createdAt: "asc" },
+        })
+      ),
       tenantDb.client.count({ where: { type: "BUYER" } }),
       tenantDb.client.count({ where: { type: "SELLER" } }),
       tenantDb.transaction.count(),
