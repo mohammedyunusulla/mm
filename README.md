@@ -10,29 +10,29 @@ A **multi-tenant SaaS platform** to digitize Indian Mandi (wholesale market) ope
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        MONOREPO (npm workspaces)                    │
 │                                                                     │
-│  ┌──────────────┐   ┌──────────────────┐   ┌────────────────────┐  │
+│  ┌──────────────┐   ┌──────────────────┐   ┌────────────────────┐   │
 │  │  @mandi/      │   │  Next.js 15 Web  │   │  Expo Mobile App   │  │
 │  │  shared       │◄──┤  Dashboard       │   │  (scaffolded)      │  │
 │  │  ─────────    │   │  ──────────────  │   │  ──────────────    │  │
 │  │  Types (TS)   │   │  App Router      │   │  Expo Router       │  │
 │  │  Zod Schemas  │◄──┤  Tailwind CSS v4 │   │  React Native      │  │
-│  └──────┬───────┘   └────────┬─────────┘   └────────────────────┘  │
-│         │                    │                                       │
-│         ▼                    ▼ REST API (Bearer JWT)                 │
+│  └──────┬───────┘   └────────┬─────────┘   └────────────────────┘   │
+│         │                    │                                      │
+│         ▼                    ▼ REST API (Bearer JWT)                │
 │  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                    Express.js Backend                         │   │
+│  │                    Express.js Backend                        │   │
 │  │  ──────────────────────────────────────────────────────────  │   │
 │  │  JWT Auth │ Zod Validation │ Rate Limiting │ Helmet + CORS   │   │
 │  └─────────────────────┬──────────────────────┬─────────────────┘   │
-│                         │                      │                     │
+│                         │                      │                    │
 │              ┌──────────▼──────┐    ┌──────────▼──────────┐         │
-│              │   Master DB     │    │   Tenant DB (×N)     │         │
-│              │   ───────────   │    │   ──────────────     │         │
-│              │   Tenants       │    │   Users, Clients     │         │
-│              │   SuperUsers    │    │   Transactions       │         │
-│              │                 │    │   Expenses, Advances │         │
-│              └─────────────────┘    └──────────────────────┘         │
-│                     PostgreSQL (Prisma ORM)                          │
+│              │   Master DB     │    │   Tenant DB (×N)     │        │
+│              │   ───────────   │    │   ──────────────     │        │
+│              │   Tenants       │    │   Users, Clients     │        │
+│              │   SuperUsers    │    │   Transactions       │        │
+│              │                 │    │   Expenses, Advances │        │
+│              └─────────────────┘    └──────────────────────┘        │
+│                     PostgreSQL (Prisma ORM)                         │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
