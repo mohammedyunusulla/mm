@@ -159,27 +159,81 @@ export default function ReportsPage() {
         <>
           {/* Summary Pie Chart */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col items-center">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
               <PieChart
                 title="Financial Overview"
                 data={[
-                  { label: "Total Purchases", value: summary.purchases.total, color: "#f97316" },
-                  { label: "Total Sales", value: summary.sales.total, color: "#22c55e" },
-                  { label: "Total Expenses", value: summary.expenses.total, color: "#ef4444" },
+                  {
+                    label: "Total Purchases",
+                    value: summary.purchases.total,
+                    color: "#f97316",
+                    details: [
+                      { label: "Total Amount", value: summary.purchases.total },
+                      { label: "Amount Paid", value: summary.purchases.paid },
+                      { label: "Balance Due", value: summary.purchases.total - summary.purchases.paid },
+                      { label: "Transactions", value: summary.purchases.count, subLabel: "count" },
+                    ],
+                  },
+                  {
+                    label: "Total Sales",
+                    value: summary.sales.total,
+                    color: "#22c55e",
+                    details: [
+                      { label: "Total Amount", value: summary.sales.total },
+                      { label: "Amount Received", value: summary.sales.paid },
+                      { label: "Receivable Due", value: summary.sales.total - summary.sales.paid },
+                      { label: "Transactions", value: summary.sales.count, subLabel: "count" },
+                    ],
+                  },
+                  {
+                    label: "Total Expenses",
+                    value: summary.expenses.total,
+                    color: "#ef4444",
+                    details: [
+                      { label: "Total Amount", value: summary.expenses.total },
+                      { label: "Entries", value: summary.expenses.count, subLabel: "count" },
+                    ],
+                  },
                 ]}
-                size={220}
+                size={240}
               />
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col items-center">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
               <PieChart
                 title="Period Breakdown"
                 data={[
-                  { label: "Sales Revenue", value: summary.sales.total, color: "#22c55e" },
-                  { label: "Purchase Cost", value: summary.purchases.total, color: "#f97316" },
-                  { label: "Expenses", value: summary.expenses.total, color: "#ef4444" },
+                  {
+                    label: "Sales Revenue",
+                    value: summary.sales.total,
+                    color: "#22c55e",
+                    details: [
+                      { label: "Gross Revenue", value: summary.sales.total },
+                      { label: "Collected", value: summary.sales.paid },
+                      { label: "Outstanding", value: summary.sales.total - summary.sales.paid },
+                    ],
+                  },
+                  {
+                    label: "Purchase Cost",
+                    value: summary.purchases.total,
+                    color: "#f97316",
+                    details: [
+                      { label: "Total Cost", value: summary.purchases.total },
+                      { label: "Paid", value: summary.purchases.paid },
+                      { label: "Payable", value: summary.purchases.total - summary.purchases.paid },
+                    ],
+                  },
+                  {
+                    label: "Expenses",
+                    value: summary.expenses.total,
+                    color: "#ef4444",
+                    details: [
+                      { label: "Total Expenses", value: summary.expenses.total },
+                      { label: "Entries", value: summary.expenses.count, subLabel: "count" },
+                    ],
+                  },
                 ]}
-                size={220}
+                size={240}
               />
               <div className="mt-4 pt-3 border-t border-gray-200 w-full flex justify-between items-center px-2">
                 <span className="font-semibold text-gray-900">Net Profit/Loss</span>
