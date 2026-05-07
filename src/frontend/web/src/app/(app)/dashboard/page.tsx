@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Users,
   ShoppingCart,
@@ -21,15 +22,17 @@ function StatCard({
   icon: Icon,
   color,
   prefix = "",
+  href,
 }: {
   title: string;
   value: string | number;
   icon: React.ElementType;
   color: string;
   prefix?: string;
+  href?: string;
 }) {
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+  const content = (
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 ${href ? "cursor-pointer hover:shadow-md hover:border-gray-200 transition-shadow" : ""}`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-500">{title}</p>
@@ -44,6 +47,11 @@ function StatCard({
       </div>
     </div>
   );
+
+  if (href) {
+    return <Link href={href}>{content}</Link>;
+  }
+  return content;
 }
 
 export default function DashboardPage() {
@@ -84,12 +92,14 @@ export default function DashboardPage() {
           value={stats.totalBuyers}
           icon={ShoppingCart}
           color="bg-blue-500"
+          href="/clients?tab=BUYER"
         />
         <StatCard
           title="Total Sellers"
           value={stats.totalSellers}
           icon={Users}
           color="bg-purple-500"
+          href="/clients?tab=SELLER"
         />
         <StatCard
           title="Today's Purchases"
@@ -97,6 +107,7 @@ export default function DashboardPage() {
           icon={ArrowDownRight}
           color="bg-orange-500"
           prefix="₹"
+          href="/buy-from"
         />
         <StatCard
           title="Today's Sales"
@@ -104,6 +115,7 @@ export default function DashboardPage() {
           icon={ArrowUpRight}
           color="bg-green-500"
           prefix="₹"
+          href="/sell-to"
         />
       </div>
 

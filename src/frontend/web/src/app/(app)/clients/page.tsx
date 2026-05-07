@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Plus, Search, Phone, MapPin, X, Pencil, Trash2, IndianRupee, FileText, Clock, ChevronRight, Wallet, Printer, Check, Camera } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -866,7 +867,11 @@ function ClientDetailPanel({
 }
 
 export default function ClientsPage() {
-  const [activeTab, setActiveTab] = useState<ClientType>("BUYER");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<ClientType>(
+    tabParam === "SELLER" ? "SELLER" : "BUYER"
+  );
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search);
