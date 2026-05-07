@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import { useTheme } from "@/components/ThemeProvider";
 import { YearProvider, useYear } from "@/components/YearProvider";
-import { AlertTriangle, Lock, LogOut, UserCircle, ChevronDown, Sun, Moon, Calendar } from "lucide-react";
+import { AlertTriangle, Lock, LogOut, UserCircle, ChevronDown, Sun, Moon, Calendar, Menu } from "lucide-react";
 
 type SubStatus = "ACTIVE" | "GRACE" | "READONLY" | "BLOCKED";
 
@@ -40,6 +40,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -83,13 +84,20 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <main className="flex-1 overflow-auto flex flex-col bg-(--color-bg)">
         {/* Top header bar */}
         <header className="flex items-center justify-between px-6 py-3 border-b border-(--color-border) bg-(--color-header-bg)">
-          {/* Year Selector */}
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-(--color-text-muted)" />
+          {/* Left side: hamburger + year selector */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-1.5 rounded-lg text-(--color-text-secondary) hover:bg-(--color-bg-hover) hover:text-(--color-text) transition"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-(--color-text-muted)" />
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
@@ -99,6 +107,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
+            </div>
           </div>
 
           {/* User menu */}

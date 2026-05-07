@@ -12,6 +12,7 @@ import {
   IndianRupee,
   BarChart3,
   Store,
+  X,
 } from "lucide-react";
 
 const navItems = [
@@ -24,7 +25,7 @@ const navItems = [
   { href: "/users", label: "Users", icon: UserPlus, adminOnly: true },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const [role, setRole] = useState<string>("");
 
@@ -38,42 +39,67 @@ export default function Sidebar() {
     } catch {}
   }, []);
 
-  return (
-    <aside className="w-64 bg-slate-800 text-white min-h-screen flex flex-col">
-      {/* Logo */}
-      <div className="p-6 border-b border-slate-700">
-        <div className="flex items-center gap-3">
-          <Store className="w-8 h-8 text-green-400" />
-          <div>
-            <h1 className="text-xl font-bold">Mandi Manager</h1>
-            <p className="text-xs text-slate-400">Digital Record Book</p>
-          </div>
-        </div>
-      </div>
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    onClose();
+  }, [pathname]);
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
-        {navItems
-          .filter((item) => !(item as any).adminOnly || role === "ADMIN")
-          .map((item) => {
-          const isActive = pathname === item.href.split("?")[0];
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isActive
-                  ? "bg-green-600 text-white"
-                  : "text-slate-300 hover:bg-slate-700 hover:text-white"
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-sm font-medium">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+  return (
+    <>
+      {/* Overlay for mobile */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        className={`
+          fixed top-0 left-0 z-50 h-full w-64 bg-slate-800 text-white flex flex-col
+          transform transition-transform duration-300 ease-in-out
+          ${open ? "translate-x-0" : "-translate-x-full"}
+          lg:translate-x-0 lg:static lg:z-auto
+        `}
+      >
+        {/* Logo + Close button */}
+        <div className="p-6 border-b border-slate-700 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Store className="w-8 h-8 text-green-400" />
+            <div>
+              <h1 className="text-xl font-bold">Mandi Manager</h1>
+              <p className="text-xs text-slate-400">Digital Record Book</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="lg:hidden text-slate-400 hover:text-white">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-1">
+          {navItems
+            .filter((item) => !(item as any).adminOnly || role === "ADMIN")
+            .map((item) => {
+            const isActive = pathname === item.href.split("?")[0];
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive
+                    ? "bg-green-600 text-white"
+                    : "text-slate-300 hover:bg-slate-700 hover:text-white"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-sm font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 }
