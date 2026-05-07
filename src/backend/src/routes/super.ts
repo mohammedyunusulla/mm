@@ -101,13 +101,14 @@ const createMandiSchema = z.object({
   phone: z.string().min(10, "Phone must be at least 10 digits").max(15),
   adminName: z.string().min(2).max(100),
   adminEmail: z.string().email(),
+  adminPhone: z.string().min(10, "Phone must be at least 10 digits").max(15).optional(),
   adminPassword: z.string().min(8, "Password must be at least 8 characters"),
   plan: z.enum(["TRIAL", "STANDARD", "PREMIUM"]).optional().default("TRIAL"),
 });
 
 router.post("/mandis", validate(createMandiSchema), async (req, res) => {
   try {
-    const { slug, name, phone, adminName, adminEmail, adminPassword, plan } =
+    const { slug, name, phone, adminName, adminEmail, adminPhone, adminPassword, plan } =
       req.body as z.infer<typeof createMandiSchema>;
 
     // Check slug uniqueness
@@ -164,10 +165,22 @@ router.post("/mandis", validate(createMandiSchema), async (req, res) => {
     // Create the admin user in the tenant DB (upsert in case of retry)
     const tenantDb = getTenantDb(dbUrl);
     const passwordHash = await bcrypt.hash(adminPassword, 12);
+    const adminPhoneClean = adminPhone?.trim() || null;
     await tenantDb.user.upsert({
       where: { email: adminEmail },
-      update: { name: adminName, passwordHash, role: "ADMIN" },
-      create: { name: adminName, email: adminEmail, passwordHash, role: "ADMIN" },
+      update: {
+        name: adminName,
+        passwordHash,
+        role: "ADMIN",
+        ...(adminPhoneClean ? { phone: adminPhoneClean } : {}),
+      },
+      create: {
+        name: adminName,
+        email: adminEmail,
+        phone: adminPhoneClean,
+        passwordHash,
+        role: "ADMIN",
+      },
     });
 
     // Register the tenant in the master DB
@@ -209,13 +222,15 @@ router.post("/mandis", validate(createMandiSchema), async (req, res) => {
 
 // ── Update a mandi ────────────────────────────────────────────────
 // PATCH /api/super/mandis/:id
-// Supports: toggle isActive, edit name, slug, phone, adminEmail
+// Supports: toggle isActive, edit name, slug, phone, adminEmail, adminPhone
 const updateMandiSchema = z.object({
   isActive: z.boolean().optional(),
   name: z.string().min(2).max(100).optional(),
   slug: z.string().min(2).max(60).regex(/^[a-z0-9-]+$/).optional(),
   phone: z.string().min(10).max(15).optional(),
   adminEmail: z.string().email().optional(),
+  // adminPhone: "" clears it; min 10 digits when present
+  adminPhone: z.union([z.literal(""), z.string().min(10).max(15)]).optional(),
   plan: z.enum(["TRIAL", "STANDARD", "PREMIUM"]).optional(),
 }).refine(data => Object.keys(data).length > 0, { message: "At least one field required" });
 
@@ -225,7 +240,7 @@ router.patch("/mandis/:id", validate(updateMandiSchema), async (req, res) => {
     const tenant = await masterDb.tenant.findUnique({ where: { id } });
     if (!tenant) { res.status(404).json({ success: false, error: "Mandi not found" }); return; }
 
-    const { isActive, name, slug, phone, adminEmail, plan } = req.body as z.infer<typeof updateMandiSchema>;
+    const { isActive, name, slug, phone, adminEmail, adminPhone, plan } = req.body as z.infer<typeof updateMandiSchema>;
 
     // If slug is changing, check uniqueness
     if (slug && slug !== tenant.slug) {
@@ -257,6 +272,26 @@ router.patch("/mandis/:id", validate(updateMandiSchema), async (req, res) => {
       const admin = await tenantDb.user.findUnique({ where: { email: tenant.adminEmail } });
       if (admin) {
         await tenantDb.user.update({ where: { id: admin.id }, data: { email: adminEmail } });
+      }
+    }
+
+    // If adminPhone supplied, sync it onto the admin user record in the tenant DB.
+    // (Empty string clears it; a valid value sets/updates it.)
+    if (adminPhone !== undefined) {
+      const tenantDb = getTenantDb(tenant.dbUrl);
+      const lookupEmail = adminEmail || tenant.adminEmail;
+      const admin = await tenantDb.user.findUnique({ where: { email: lookupEmail } });
+      if (admin) {
+        const newPhone = adminPhone.trim() || null;
+        if (newPhone && newPhone !== admin.phone) {
+          // Reject if another user in this tenant already has that phone.
+          const clash = await tenantDb.user.findUnique({ where: { phone: newPhone } });
+          if (clash && clash.id !== admin.id) {
+            res.status(409).json({ success: false, error: "Phone already in use by another user" });
+            return;
+          }
+        }
+        await tenantDb.user.update({ where: { id: admin.id }, data: { phone: newPhone } });
       }
     }
 

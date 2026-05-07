@@ -21,7 +21,10 @@ const loginSchema = z.object({
 
 router.post("/login", validate(loginSchema), async (req, res) => {
   try {
-    const { identifier, password, tenantSlug } = req.body as z.infer<typeof loginSchema>;
+    const raw = req.body as z.infer<typeof loginSchema>;
+    const identifier = raw.identifier.trim();
+    const password = raw.password;
+    const tenantSlug = raw.tenantSlug.trim().toLowerCase();
 
     // Step 1: find tenant in master DB
     const tenant = await masterDb.tenant.findUnique({ where: { slug: tenantSlug } });
@@ -44,9 +47,30 @@ router.post("/login", validate(loginSchema), async (req, res) => {
     // Step 2: connect to tenant DB and verify user by email or phone
     const db = getTenantDb(tenant.dbUrl);
     const isEmail = identifier.includes("@");
-    const user = isEmail
-      ? await db.user.findUnique({ where: { email: identifier } })
+    let user = isEmail
+      ? await db.user.findUnique({ where: { email: identifier.toLowerCase() } })
       : await db.user.findUnique({ where: { phone: identifier } });
+
+    // Fallback: tolerate stored / typed phone-format differences
+    // (e.g. user stored as "+919876543210" but typed "9876543210", or with spaces).
+    if (!user && !isEmail) {
+      const digits = identifier.replace(/\D/g, "");
+      if (digits.length >= 10) {
+        const last10 = digits.slice(-10);
+        // findFirst because we're matching against several normalized variants.
+        user = await db.user.findFirst({
+          where: {
+            OR: [
+              { phone: digits },
+              { phone: last10 },
+              { phone: `+${digits}` },
+              { phone: `+91${last10}` },
+              { phone: { endsWith: last10 } },
+            ],
+          },
+        });
+      }
+    }
 
     if (!user || !user.isActive) {
       res.status(401).json({ success: false, error: "Invalid credentials" });

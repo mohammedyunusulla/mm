@@ -31,10 +31,16 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      const trimmedIdentifier = identifier.trim();
+      const trimmedTenantSlug = tenantSlug.trim().toLowerCase();
       const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password, tenantSlug }),
+        body: JSON.stringify({
+          identifier: trimmedIdentifier,
+          password,
+          tenantSlug: trimmedTenantSlug,
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -52,7 +58,10 @@ export default function LoginPage() {
           localStorage.setItem("subscription", JSON.stringify(data.data.subscription));
         }
         if (rememberMe) {
-          localStorage.setItem("rememberMe", JSON.stringify({ tenantSlug, identifier }));
+          localStorage.setItem(
+            "rememberMe",
+            JSON.stringify({ tenantSlug: trimmedTenantSlug, identifier: trimmedIdentifier })
+          );
         } else {
           localStorage.removeItem("rememberMe");
         }

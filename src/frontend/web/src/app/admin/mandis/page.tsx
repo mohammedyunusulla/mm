@@ -45,6 +45,7 @@ interface CreateForm {
   phone: string;
   adminName: string;
   adminEmail: string;
+  adminPhone: string;
   adminPassword: string;
   plan: PlanTier;
 }
@@ -54,10 +55,11 @@ interface EditForm {
   slug: string;
   phone: string;
   adminEmail: string;
+  adminPhone: string;
   plan: PlanTier;
 }
 
-const EMPTY_CREATE: CreateForm = { slug: "", name: "", phone: "", adminName: "", adminEmail: "", adminPassword: "", plan: "TRIAL" };
+const EMPTY_CREATE: CreateForm = { slug: "", name: "", phone: "", adminName: "", adminEmail: "", adminPhone: "", adminPassword: "", plan: "TRIAL" };
 
 function authHeaders(): HeadersInit {
   const token = localStorage.getItem("super_token");
@@ -79,7 +81,7 @@ export default function MandisPage() {
 
   // Edit modal
   const [editTarget, setEditTarget] = useState<Mandi | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>({ name: "", slug: "", phone: "", adminEmail: "", plan: "TRIAL" });
+  const [editForm, setEditForm] = useState<EditForm>({ name: "", slug: "", phone: "", adminEmail: "", adminPhone: "", plan: "TRIAL" });
   const [editing, setEditing] = useState(false);
   const [editError, setEditError] = useState("");
 
@@ -154,10 +156,18 @@ export default function MandisPage() {
     setCreating(true);
     setCreateError("");
     try {
+      // Drop adminPhone if empty so the backend's optional-but-min(10) rule doesn't reject it.
+      const trimmedAdminPhone = createForm.adminPhone.trim();
+      const payload: Partial<CreateForm> = { ...createForm };
+      if (trimmedAdminPhone) {
+        payload.adminPhone = trimmedAdminPhone;
+      } else {
+        delete payload.adminPhone;
+      }
       const res = await fetch(`${API_URL}/api/super/mandis`, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify(createForm),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
@@ -176,10 +186,28 @@ export default function MandisPage() {
 
   const openEdit = (mandi: Mandi) => {
     setEditTarget(mandi);
-    setEditForm({ name: mandi.name, slug: mandi.slug, phone: mandi.phone, adminEmail: mandi.adminEmail, plan: mandi.plan });
+    setEditForm({ name: mandi.name, slug: mandi.slug, phone: mandi.phone, adminEmail: mandi.adminEmail, adminPhone: "", plan: mandi.plan });
     setEditError("");
     setResetPassword("");
     setResetMsg(null);
+
+    // Fetch the current admin's phone from the tenant DB (detail endpoint).
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/super/mandis/${mandi.id}`, { headers: authHeaders() });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data?.users)) {
+          const admin = data.data.users.find((u: { role: string; email?: string | null; phone?: string | null }) =>
+            u.role === "ADMIN" && (u.email === mandi.adminEmail || !mandi.adminEmail)
+          ) ?? data.data.users.find((u: { role: string }) => u.role === "ADMIN");
+          if (admin?.phone) {
+            setEditForm((prev) => ({ ...prev, adminPhone: admin.phone as string }));
+          }
+        }
+      } catch {
+        // Non-fatal — admin can still type the phone manually.
+      }
+    })();
   };
 
   const handleResetMandiPassword = async () => {
@@ -212,10 +240,19 @@ export default function MandisPage() {
     setEditing(true);
     setEditError("");
     try {
+      // Always send adminPhone so the user can both add and clear it.
+      const payload: Record<string, unknown> = {
+        name: editForm.name,
+        slug: editForm.slug,
+        phone: editForm.phone,
+        adminEmail: editForm.adminEmail,
+        plan: editForm.plan,
+        adminPhone: editForm.adminPhone.trim(),
+      };
       const res = await fetch(`${API_URL}/api/super/mandis/${editTarget.id}`, {
         method: "PATCH",
         headers: authHeaders(),
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.success) {
@@ -477,6 +514,14 @@ export default function MandisPage() {
                   </div>
                 </div>
                 <div className="mt-4">
+                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                    Admin Phone <span className="text-slate-500">(optional — enables login by phone)</span>
+                  </label>
+                  <input type="tel" value={createForm.adminPhone} onChange={(e) => setCreateForm({ ...createForm, adminPhone: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-slate-700 border border-slate-600 text-white rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    placeholder="9876543210" minLength={10} maxLength={15} />
+                </div>
+                <div className="mt-4">
                   <label className="block text-xs font-medium text-slate-400 mb-1">Admin Password</label>
                   <input required type="password" value={createForm.adminPassword} onChange={(e) => setCreateForm({ ...createForm, adminPassword: e.target.value })}
                     className="w-full px-3 py-2.5 bg-slate-700 border border-slate-600 text-white rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
@@ -531,6 +576,14 @@ export default function MandisPage() {
                 <label className="block text-xs font-medium text-slate-400 mb-1">Admin Email</label>
                 <input required type="email" value={editForm.adminEmail} onChange={(e) => setEditForm({ ...editForm, adminEmail: e.target.value })}
                   className="w-full px-3 py-2.5 bg-slate-700 border border-slate-600 text-white rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">
+                  Admin Phone <span className="text-slate-500">(optional — enables login by phone)</span>
+                </label>
+                <input type="tel" value={editForm.adminPhone} onChange={(e) => setEditForm({ ...editForm, adminPhone: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-slate-700 border border-slate-600 text-white rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  placeholder="9876543210" minLength={10} maxLength={15} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1">Plan</label>
