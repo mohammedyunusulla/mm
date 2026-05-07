@@ -169,12 +169,12 @@ export default function PieChart({ data, title, size = 240 }: PieChartProps) {
             onClick={() => handleSliceClick(i)}
             className={`flex items-center justify-between text-sm px-3 py-2 rounded-lg transition-all w-full text-left ${
               selected === i
-                ? "ring-2 shadow-sm"
+                ? "shadow-sm"
                 : hovered === i
                 ? "bg-gray-50"
                 : "hover:bg-gray-50"
             }`}
-            style={selected === i ? { backgroundColor: `${d.color}10`, ringColor: d.color } : {}}
+            style={selected === i ? { backgroundColor: `${d.color}10`, boxShadow: `inset 0 0 0 2px ${d.color}` } : {}}
             onMouseEnter={() => setHovered(i)}
             onMouseLeave={() => setHovered(null)}
           >
